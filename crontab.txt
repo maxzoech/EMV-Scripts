@@ -1,0 +1,25 @@
+# Update new entries from PDB
+## every Wednesday 12:15h
+15 12 * * 3 /usr/bin/python3 /home/bioinfo/services/emv/update/getNewPDBEntries.py > /home/bioinfo/services/emv/update/getNewPDBEntries.log
+
+# Run weekly updates
+## every Wednesday 13:00h
+30 13 * * 3 /usr/bin/python3 /home/bioinfo/services/emv/tools/calc_updates_batch.py -i /home/bioinfo/services/emv/update/data/new-all_entries_mappings.csv > /home/bioinfo/services/emv/update/calc_updates_batch.log
+
+# Clean old files
+# logs, older than 30 days
+## At 08:05 every Monday
+05 08 * * mon find /home/bioinfo/services/emv/logs -type f -name "*.out" -mtime +30 -delete
+## At 08:10 every first Monday
+10 08 * * mon find /home/bioinfo/services/emv//logs -type f -name "*.err" -mtime +30 -delete
+
+# old maps and models
+## At 08:15 every Monday
+15 08 * * mon find /home/bioinfo/services/emv/data/emdbs/ -type f -name "*.map" -mtime +30 -delete
+15 08 * * mon find /home/bioinfo/services/emv/data/emdbs/ -type f -name "*.ent" -mtime +30 -delete
+
+# Temp data, files bigger than 50 MB
+## At 00:15 every first day-of-month
+15 0 1 * * find /home/bioinfo/services/emv/data/emdbs/ -type f -name "*.vol" -size +50000k -delete
+## At 00:20 every first day-of-month
+20 0 1 * * find /home/bioinfo/services/emv/data/emdbs/ -type f -name "*.mrc" -size +50000k -delete
