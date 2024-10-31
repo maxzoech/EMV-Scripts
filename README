@@ -1,0 +1,105 @@
+# Version 0.1.0
+#
+# Launch all methods: mapq, fscq, blocres, monores, deepres
+### cd $HOME/services/emv/tools/
+### bash  queue_updates.sh 2022-09-21_new-all_entries_mappings.csv mapq
+### bash  queue_updates.sh 2022-09-21_new-all_entries_mappings.csv fscq
+### bash  queue_updates.sh 2022-09-21_new-all_entries_mappings.csv monores
+### bash  queue_updates.sh 2022-09-21_new-all_entries_mappings.csv blocres
+### bash  queue_updates.sh 2022-09-21_new-all_entries_mappings.csv deepres
+
+
+# get counts for statistics
+### cd /home/bioinfo/services/emv/data/
+### bash getDataFileStatistics.sh
+
+## Launching new entries to the SLURM queue
+# python calcUpdates.py -i <filename> -m <mapq|fscq|deepres|monores>
+# python calcUpdates.py -i data/2021-06-21_query-failures.csv -m monores
+
+
+## Control of the queue
+# re-start SLURM
+### sudo service slurmd restart && sudo service slurmctld restart
+
+# check if SLURM manager is running
+### sudo systemctl status slurmctld
+# Bring the node back UP after some failure
+### sudo scontrol update NodeName=finlay State=RESUME
+
+# Logs
+### nice -n 19 htop
+### nice -n 19 nvtop
+ 
+
+# run updates
+### bash queue_updates.sh <inputfile.csv> <method: mapq,fscq,blocres,monores,deepres,statslocalres>
+
+
+# cancel a task
+### scancel #task
+# cancel all tasks
+### scancel -u bioinfo
+# cancel all the pending jobs for the user:
+### scancel -t PENDING -u bioinfo
+### sudo scontrol suspend <jobid>
+# requeue (cancel and rerun) a particular job:
+### scontrol requeue <jobid>
+
+# Hold all PENDING tasks
+### squeue -h --me -t PD --format "scontrol hold %i" | sh
+# Release all holded tasks
+### squeue -h --me -t PD --format "scontrol release %i #%r %j" | grep JobHeldUser | sh
+
+# Suspend a job that is currently RUNNING
+### (sudo) scontrol suspend job_id
+# Resume a paused job
+### (sudo) scontrol resume job_id
+
+# killing Zombies
+### ps aux | egrep "Z|defunct"
+# find parent process
+### ps -o ppid= <Child PID>
+# ask parent to "manage" children processes
+### kill -s SIGCHLD <Parent PID>
+# force to kill parent process
+### kill -9 <Parent PID>
+
+# check files in dir
+### cd data/emdbs/emd-12345
+### nice -n 19 watch -n 15 "ls -ltr ./ | tail -50"
+
+# Sync to development
+### rsync -azv --exclude={'__*','Miniconda3-latest-Linux-x86_64.*',Predict_Result,logs,mapq_chimera,miniconda3,scipion3-conda,software,workdir,xmipp} bioinfo@finlay.cnb.csic.es:~/services/emv/tools/ tools/
+
+# Continously check for file listings
+### nice -n 19 watch -n 15 "ls -lAtr ./*.out | tail -25"
+### nice -n 19 watch -n 15 "ls -lAtr ./*.err | tail -25"
+### nice -n 19 watch -n 15 'ls -lArt emdbs | tail'
+
+# Check HD Disk space
+### df -h
+# Find files older than 30 days
+### find /home/bioinfo/services/emv/tools/logs -type f -mtime +30
+# Delete files older than 30 days
+### find /home/bioinfo/services/emv/tools/logs -type f -mtime +30 -delete
+
+# Delete pending jobs whose parent failed
+# just show
+### squeue -h  -t PD -O jobid,reason
+### squeue -h  -t PD -O jobid,reason | awk '/DependencyNeverSatis/ {print $1}' | xargs echo scancel
+# delete
+### squeue -h  -t PD -O jobid,reason | awk '/DependencyNeverSatis/ {print $1}' | xargs scancel
+
+# SEND last entries
+# bioinfo@finlay:~/services/emv/tools$ python3 calc_updates_batch.py -i ../update/data/2023-12-20_new-all_entries_mappings.csv
+bioinfo@finlay:~/services/emv/tools$ python3 calc_updates_batch.py -i ../update/data/2024-03-06_new-all_entries_mappings.csv
+
+
+# Check for job status
+nice -n 19 watch -n 15 -c 'squeue -u bioinfo -h -t pending,running -r -O "state" | uniq -c'
+nice -n 19 watch -n 15 -c 'squeue -u bioinfo -t R --format="%.9i %.9j %.2t %.4C %.10m %.20V %.20S %.12M"'
+nice -n 19 watch -n 15 -c 'squeue -u bioinfo -t PD --format="%.9i %.9j %.2t %.4C %.10m %.20V %.20S %.16R" | head -n 10'
+nice -n 19 watch -n 15 -c 'squeue -u bioinfo -t PD --format="%.9i %.9j %.2t %.4C %.10m %.20V %.20S %.16R" | tail -n 10'
+# cancel jobs if EMDB/PDB files are not available
+squeue -h  -t PD -O jobid,reason | awk '/DependencyNeverSatis/ {print $1}' | xargs scancel &&  nice -n 19 watch -n 30 'squeue -h  -t PD --format="%.8i %.9j %.8T %R"   | grep DependencyNeverSatisfied'

@@ -1,0 +1,10 @@
+update
+data
+logs
+
+tools/software
+tools/mapq_chimera
+tools/__pycache__
+
+.venv
+xmipp
