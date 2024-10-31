@@ -1,4 +1,5 @@
-update
+update/data
+update/*.log
 data
 logs
 
