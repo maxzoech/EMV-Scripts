@@ -1,5 +1,7 @@
 EMV-Scripts
 
+Version 0.2.0
+
 This GIT repo gather all scripts that run in finlay.cnb.csic.es under user bioinfo
 to automatically validate new entries from EMDB+PDB.
 
