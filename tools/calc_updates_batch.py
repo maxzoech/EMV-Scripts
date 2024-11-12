@@ -121,6 +121,8 @@ def read_entries_file(filename, method):
                 submit_dependant_job(map_id, pdb_id, job_id, "blocres")
                 submit_dependant_job(map_id, pdb_id, job_id, "monores")
                 submit_dependant_job(map_id, pdb_id, job_id, "deepres")
+                # db statistics
+                submit_dependant_job(map_id, pdb_id, job_id, "statslocalres")
 
 
 if __name__ == "__main__":
