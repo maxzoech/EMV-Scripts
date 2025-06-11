@@ -55,10 +55,10 @@ def _param_to_cmd_args(param: inspect.Parameter):
 
     return prefix+param.name
 
-def external(f, args_map=None, **run_args):
+def foreign_function(f, args_map=None, **run_args):
     is_empty = _func_is_empty(f)
     if not is_empty:
-        raise RuntimeError(f"Forward declared external Scipion function {f.__name__} must be only contain a single pass statement.")
+        raise RuntimeError(f"Forward declared external scipion function {f.__name__} must be only contain a single pass statement.")
 
     if args_map is None:
         args_map = {}
@@ -99,30 +99,6 @@ def external(f, args_map=None, **run_args):
 
     return wrapper
 
-
-@partial(external, args_map={"output": "o", "volume": "vol"}, shell=False)
-def xmipp_pdb_label_from_volume(output, *, pdb, volume, mask, sampling, origin="default_origin"):
-    pass
-
-
-def main():
-    
-    exit_code = xmipp_pdb_label_from_volume(
-        "/dev/null/deepres/atom.pub",
-        pdb="pdb_path",
-        volume="volume_path",
-        mask="mask_path",
-        sampling="sampling_path",
-        origin="origin"
-    )
-
-    print("returned> ", exit_code)
-
-#     # subprocess.run(["scipion", "run", "xmipp_pdb_label_from_volume"])
-
-#     # os.system(
-#     #     'scipion3'
-#     # )
-
-if __name__ == "__main__":
-    main()
+__all__ = [
+    foreign_function
+]
