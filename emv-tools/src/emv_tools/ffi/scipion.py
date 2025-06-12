@@ -11,5 +11,5 @@ def xmipp_transform_filter(inputs: str, outputs: str, *, fourier: str) -> int:
     pass
 
 @partial(foreign_function, args_map={"inputs": "i", "outputs": "o"})
-def xmipp_image_resize(inputs: str, outputs: str, *, factor: str) -> int:
+def xmipp_image_resize(inputs: str, outputs: str, *, dim: int) -> int:
     pass

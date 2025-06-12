@@ -80,7 +80,7 @@ def foreign_function(f, args_map=None, **run_args):
         for v in defaults.values():
             merged_args.setdefault(v, v.default)
         
-        raw_args = [[_param_to_cmd_args(p), v] for p, v in merged_args.items()]
+        raw_args = [[_param_to_cmd_args(p), str(v)] for p, v in merged_args.items()]
         raw_args = itertools.chain.from_iterable(raw_args)
         
         raw_args = [

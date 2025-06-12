@@ -1,34 +1,26 @@
 
-# from Bio.PDB import MMCIFParser, PDBIO
-
 import xmippLib
 from emv_tools.ffi.scipion import xmipp_image_resize, xmipp_transform_filter
 
+import tempfile
+
 VOLUME_PATH = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/Runs/000727_XmippProtDeepRes/extra/deepRes_resolution_originalSize.vol"
 CIF_FILE = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/8tqo.cif"
-RESIZED_VOL_PATH = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/resized_vol.vol"
 
 from emv_tools.metadata import download_emdb_metadata
 
-def resize_volume(volume_path: str, size: int, resolution: int):
-    if resolution >= 2.7:
-        resize_samp = 1.0
-    else:
-        resize_samp = 0.5
+def resize_volume(input_path: str, output_path: str, size: int, resolution: int):
+    resize_samp = 1.0 if resolution >= 2.7 else 0.5 
 
-    V = xmippLib.Image(volume_path).getData()
-    (z, y, x) = V.shape
+    V = xmippLib.Image(input_path).getData()
+    (z, _, _) = V.shape
 
     factor = size / z
     final_samp = resize_samp / factor
     fourier_V = resize_samp / 2 * final_samp
 
-    try:
-        xmipp_transform_filter(volume_path, RESIZED_VOL_PATH, fourier=f"low_pass {fourier_V}")
-    except Exception as e:
-        print(e)
-
-    print("Something")
+    xmipp_transform_filter(input_path, output_path, fourier=f"low_pass {fourier_V}")
+    xmipp_image_resize(output_path, output_path, dim=factor)
 
 
 def main():
@@ -46,7 +38,11 @@ def main():
     # print(io)
 
     metadata = download_emdb_metadata(41510)
-    resize_volume(VOLUME_PATH, metadata.size, metadata.resolution)
+
+    with tempfile.NamedTemporaryFile(suffix=".vol") as file:
+        resize_volume(VOLUME_PATH, file.name, metadata.size, metadata.resolution)
+        print(file.name)
+
 
     # io.save("../data/structure.pdb")
     PDB_PATH = "emv-tools/data/emd_41510/structure.pdb"
