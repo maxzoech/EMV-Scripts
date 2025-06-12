@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 from subprocess import Popen, PIPE
 
 import ast
@@ -38,13 +39,17 @@ def _func_is_empty(func):
     return False  # In case no FunctionDef was found
 
 
-def _param_to_cmd_args(param: inspect.Parameter):
+def _param_to_cmd_args(param: inspect.Parameter, args_map):
+
+    k = param.name
+    param = param.replace(name=args_map[k]) if k in args_map else param
+
     is_keyword = param.kind == inspect.Parameter.KEYWORD_ONLY
     prefix = "--" if is_keyword else "-"
 
     return prefix+param.name
 
-def foreign_function(f, args_map=None, **run_args):
+def foreign_function(f, args_map=None, args_validation=None, **run_args):
     is_empty = _func_is_empty(f)
     if not is_empty:
         raise RuntimeError(f"Forward declared external scipion function {f.__name__} must be only contain a single pass statement.")
@@ -55,12 +60,17 @@ def foreign_function(f, args_map=None, **run_args):
 
     if args_map is None:
         args_map = {}
+    if args_validation is None:
+        args_validation = {}
 
-    params = inspect.signature(f)
-    params = {k: param.replace(name=args_map[k]) if k in args_map else param for k, param in params.parameters.items()}
+    params = inspect.signature(f).parameters
+    args_validation = { k: re.compile(v) for k, v in args_validation.items() }
 
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
+        # Validate arguments with regex
+        
+
         _ = f(*args, **kwargs) # Call function for Python to throw error if args and kwargs aren't passed correctly
 
         defaults = {
@@ -79,8 +89,19 @@ def foreign_function(f, args_map=None, **run_args):
 
         for v in defaults.values():
             merged_args.setdefault(v, v.default)
+
+        # Validate inputs before calling external program
+        # arg_names = {k.name for k in merged_args}
+        for arg, value in merged_args.items():
+            if not arg.name in args_validation:
+                continue
+
+            pattern = args_validation[arg.name]
+            if not re.fullmatch(pattern, value):
+                raise ValueError(f"Value '{value}' for does not have the required format for '{arg.name}'")
+
         
-        raw_args = [[_param_to_cmd_args(p), str(v)] for p, v in merged_args.items()]
+        raw_args = [[_param_to_cmd_args(p, args_map), str(v)] for p, v in merged_args.items()]
         raw_args = itertools.chain.from_iterable(raw_args)
         
         raw_args = [
@@ -88,6 +109,7 @@ def foreign_function(f, args_map=None, **run_args):
         ]
 
         cmd = " ".join(raw_args)
+        # print(cmd)
         proc = Popen(cmd, **run_args)
         _, err = proc.communicate() # Blocks until finished
         if proc.returncode != 0:
