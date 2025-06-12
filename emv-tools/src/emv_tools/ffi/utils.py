@@ -1,6 +1,6 @@
 import os
 import sys
-import subprocess
+from subprocess import Popen, PIPE
 
 import ast
 import inspect
@@ -10,28 +10,17 @@ import itertools
 import functools
 from functools import partial
 
-class ScipionFunction:
-    def __init__(self, f: Callable, args_map: Dict[str, str]):
+class ScipionError(Exception):
 
-        args = inspect.signature(f)
+    def __init__(self, returncode: int, message: str, func_name: str):
+        super().__init__()
 
-        self.func = f
-        self.arg_names = [args_map[arg.name] if arg.name in args_map else arg.name for arg in args.parameters.values()]
+        self.returncode = returncode
+        self.message = message
+        self.func_name = func_name
 
-        functools.update_wrapper(self, f)
-    
-    def __call__(self, *args, **kwargs) -> int:
-        
-        args_dict = dict(zip(self.arg_names, args))
-        args_dict = {
-            **args_dict,
-            **kwargs
-        }
-        
-        raw_args = itertools.chain.from_iterable([["--"+k, v] for k, v in args_dict.items()])
-
-        print("Would run scipion call with")
-        # 
+    def __str__(self):
+        return f"{self.message}\nExternal call to {self.func_name} failed with exit code {self.returncode}"
 
 
 def _func_is_empty(func):
@@ -59,6 +48,10 @@ def foreign_function(f, args_map=None, **run_args):
     is_empty = _func_is_empty(f)
     if not is_empty:
         raise RuntimeError(f"Forward declared external scipion function {f.__name__} must be only contain a single pass statement.")
+
+    run_args.setdefault("shell", True)
+    # run_args["stdout"]=PIPE
+    run_args["stderr"]=PIPE
 
     if args_map is None:
         args_map = {}
@@ -91,11 +84,16 @@ def foreign_function(f, args_map=None, **run_args):
         raw_args = itertools.chain.from_iterable(raw_args)
         
         raw_args = [
-            "scipion", "run", *raw_args
+            "scipion", "run", f.__name__, *raw_args
         ]
 
-        # cmd = " ".join(raw_args)
-        return subprocess.run(raw_args, **run_args)
+        cmd = " ".join(raw_args)
+        proc = Popen(cmd, **run_args)
+        _, err = proc.communicate() # Blocks until finished
+        if proc.returncode != 0:
+            raise ScipionError(proc.returncode, err.decode("utf-8"), f.__name__)
+        
+        return proc.returncode
 
     return wrapper
 
