@@ -14,6 +14,7 @@ from emv_tools.utils.external_call import foreign_function
 def xmipp_transform_filter(inputs: str, outputs: str, *, fourier: str) -> int:
     pass
 
+
 @partial(
     foreign_function,
     args_map={"inputs": "i", "outputs": "o"},
@@ -24,6 +25,8 @@ def xmipp_transform_filter(inputs: str, outputs: str, *, fourier: str) -> int:
 )
 def xmipp_image_resize(inputs: str, outputs: str, *, dim: int) -> int:
     pass
+
+
 
 @partial(
     foreign_function,

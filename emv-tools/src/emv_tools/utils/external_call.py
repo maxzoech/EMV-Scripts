@@ -11,6 +11,9 @@ import itertools
 import functools
 from functools import partial
 
+from .func_params import extract_func_params
+
+
 class ScipionError(Exception):
 
     def __init__(self, returncode: int, message: str, func_name: str):
@@ -73,22 +76,7 @@ def foreign_function(f, args_map=None, args_validation=None, **run_args):
 
         _ = f(*args, **kwargs) # Call function for Python to throw error if args and kwargs aren't passed correctly
 
-        defaults = {
-            k: param
-            for k, param in params.items()
-            if param.default is not param.empty
-        }
-
-        args_dict = dict(zip(params.values(), args))
-        kwargs_dict = { params[k]: v for k, v in kwargs.items() }
-
-        merged_args = {
-            **args_dict,
-            **kwargs_dict,
-        }
-
-        for v in defaults.values():
-            merged_args.setdefault(v, v.default)
+        merged_args = extract_func_params(args, kwargs, params)        
 
         # Validate inputs before calling external program
         # arg_names = {k.name for k in merged_args}

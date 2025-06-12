@@ -1,7 +1,8 @@
 
 import xmippLib
-from emv_tools.ffi.scipion import xmipp_image_resize, xmipp_transform_filter
+from emv_tools.lib.xmipp import transform_filter, image_resize
 
+from functools import partial
 import tempfile
 
 VOLUME_PATH = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/Runs/000727_XmippProtDeepRes/extra/deepRes_resolution_originalSize.vol"
@@ -9,7 +10,7 @@ CIF_FILE = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD
 
 from emv_tools.metadata import download_emdb_metadata
 
-def resize_volume(input_path: str, output_path: str, size: int, resolution: int):
+def resize_volume(input_path: str, size: int, resolution: int):
     resize_samp = 1.0 if resolution >= 2.7 else 0.5 
 
     V = xmippLib.Image(input_path).getData()
@@ -19,8 +20,10 @@ def resize_volume(input_path: str, output_path: str, size: int, resolution: int)
     final_samp = resize_samp / factor
     fourier_V = resize_samp / 2 * final_samp
 
-    xmipp_transform_filter(input_path, output_path, fourier=f"low_pass {fourier_V}")
-    xmipp_image_resize(output_path, output_path, dim=factor)
+    result = transform_filter(input_path, fourier=f"low_pass {fourier_V}")
+    result = image_resize(result, dim=factor)
+
+    return result
 
 
 def main():
@@ -39,9 +42,11 @@ def main():
 
     metadata = download_emdb_metadata(41510)
 
-    with tempfile.NamedTemporaryFile(suffix=".vol") as file:
-        resize_volume(VOLUME_PATH, file.name, metadata.size, metadata.resolution)
-        print(file.name)
+    output = resize_volume(VOLUME_PATH, size=metadata.size, resolution=metadata.resolution)
+    print(output)
+
+    # with tempfile.NamedTemporaryFile(suffix=".vol") as file:
+    #     print(file.name)
 
 
     # io.save("../data/structure.pdb")
