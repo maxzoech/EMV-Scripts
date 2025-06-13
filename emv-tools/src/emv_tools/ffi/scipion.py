@@ -32,19 +32,45 @@ def xmipp_image_resize(inputs: str, outputs: str, *, dim: int) -> int:
 @proxify
 @partial(
     foreign_function,
-    args_map={"output": "o", "volume": "vol"},
-)
-def xmipp_pdb_label_from_volume(output: str, *, pdb: str, volume: str, mask: str, sampling, origin: str):
-    pass
-
-
-@partial(
-    foreign_function,
     args_map={
         "inputs": "i",
         "outputs": "o",
         "center_pdb": "centerPDB"
+    },
+    args_validation={
+        "inputs": "(.+)\.pdb",
+        # "outputs": "(.+)\.vol",
     }
 )
-def xmipp_volume_from_pdb(inputs: str, outputs: str, v: int, *, center_pdb: str, sampling: float, size):
+def xmipp_volume_from_pdb(inputs: str, outputs: str, *, center_pdb: str, sampling: float, size):
+    pass
+
+
+def postprocess_volume_align_args(raw_args):
+    _, out_path = raw_args[0]
+    return raw_args[1:] + [[out_path]]
+
+@proxify
+@partial(
+    foreign_function,
+    args_map={
+        "embdb_map": "i1",
+        "volume": "i2",
+    },
+    args_validation={
+        "embdb_map": "(.+)\.map",
+        "volume": "(.+)\.vol",
+    },
+    postprocess_fn=postprocess_volume_align_args
+)
+def xmipp_volume_align(outputs: str, *, embdb_map: str, volume: str, local="--apply"):
+    pass
+
+
+@proxify
+@partial(
+    foreign_function,
+    args_map={"output": "o", "volume": "vol"},
+)
+def xmipp_pdb_label_from_volume(output: str, *, pdb: str, volume: str, mask: str, sampling, origin: str):
     pass

@@ -52,7 +52,7 @@ def _param_to_cmd_args(param: inspect.Parameter, args_map):
 
     return prefix+param.name
 
-def foreign_function(f, args_map=None, args_validation=None, **run_args):
+def foreign_function(f, args_map=None, args_validation=None, postprocess_fn=None, **run_args):
     is_empty = _func_is_empty(f)
     if not is_empty:
         raise RuntimeError(f"Forward declared external scipion function {f.__name__} must be only contain a single pass statement.")
@@ -71,9 +71,6 @@ def foreign_function(f, args_map=None, args_validation=None, **run_args):
 
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        # Validate arguments with regex
-        
-
         _ = f(*args, **kwargs) # Call function for Python to throw error if args and kwargs aren't passed correctly
 
         merged_args = extract_func_params(args, kwargs, params)        
@@ -90,14 +87,18 @@ def foreign_function(f, args_map=None, args_validation=None, **run_args):
 
         
         raw_args = [[_param_to_cmd_args(p, args_map), str(v)] for p, v in merged_args.items()]
+        if postprocess_fn is not None:
+            raw_args = postprocess_fn(raw_args)
+
         raw_args = itertools.chain.from_iterable(raw_args)
-        
+
+
         raw_args = [
             "scipion", "run", f.__name__, *raw_args
         ]
 
         cmd = " ".join(raw_args)
-        # print(cmd)
+        print(cmd)
         proc = Popen(cmd, **run_args)
         _, err = proc.communicate() # Blocks until finished
         if proc.returncode != 0:

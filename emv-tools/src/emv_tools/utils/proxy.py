@@ -1,4 +1,6 @@
 import os
+import shutil
+
 import inspect
 import tempfile
 import logging
@@ -11,8 +13,9 @@ from collections import namedtuple
 from .func_params import extract_func_params
 
 class Proxy:
-    def __init__(self, file_ext):
-        self.temp_file = tempfile.NamedTemporaryFile(suffix=f".{file_ext}", delete=False)
+    def __init__(self, file_ext=None):
+        suffix = "" if file_ext is None else f".{file_ext}"
+        self.temp_file = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
 
     @property
     def path(self):
@@ -25,11 +28,20 @@ class Proxy:
             f.write("".join(lines))
 
         return proxy
+    
+    def typed(self, file_ext):
+        new_proxy = Proxy(file_ext)
+        shutil.copy(self.path, new_proxy.path)
+
+        import os
+        print(os.path.getsize(self.path), os.path.getsize(new_proxy.path))
+
+        return new_proxy
 
     def __del__(self):
         try:
             os.remove(self.temp_file.name)
-            # print(f"Removed file at: {self.temp_file.name}")
+            print(f"Removed file at: {self.temp_file.name}")
         except:
             pass # Fail silently
 
@@ -47,11 +59,20 @@ def _replace_with_proxy(name, value):
 
 
 def proxify(f, map_inputs=True, map_outputs=True):
-    
+
     signature = inspect.signature(f)
 
     @wraps(f)
     def wrapper(*args, **kwargs):
+        try:
+            f.__wrapped__(*args, **kwargs)
+        except AttributeError as e:
+            logging.warning(
+                "Could not check function arguments at call site; this" \
+                "may lead to undefined behaviour and may be due " \
+                "to an additional function wrapper: Please make sure to " \
+                "decorate your wrapper with @functools.wraps(f)"
+            )
 
         func_args = extract_func_params(args, kwargs, signature.parameters)
         func_args = { k.name: v for k, v in func_args.items() }
@@ -68,8 +89,6 @@ def proxify(f, map_inputs=True, map_outputs=True):
                 if isinstance(v, Proxy):
                     output_proxies.append(v)
                     func_args[k] = v.path
-
-        print(func_args)
 
 
         out_val = f(**func_args)

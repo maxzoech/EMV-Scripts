@@ -1,13 +1,19 @@
 import os
 
 import xmippLib
-from .ffi.scipion import xmipp_transform_filter, xmipp_image_resize
-from .utils.proxy import OutputInfo
+from .ffi.scipion import (
+    xmipp_transform_filter,
+    xmipp_image_resize,
+    xmipp_volume_from_pdb,
+    xmipp_volume_align
+)
+from .utils.proxy import Proxy, OutputInfo
 
 from functools import partial
 import tempfile
 
 VOLUME_PATH = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/Runs/000727_XmippProtDeepRes/extra/deepRes_resolution_originalSize.vol"
+EMD_MAP = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/emd_41510.map"
 CIF_FILE = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/8tqo.cif"
 
 PDB_PATH = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/structure.pdb"
@@ -25,7 +31,7 @@ def resize_volume(input_path: str, size: int, resolution: int):
     fourier_V = resize_samp / 2 * final_samp
 
     result = xmipp_transform_filter(input_path, OutputInfo("vol"), fourier=f"low_pass {fourier_V}")
-    result = xmipp_image_resize(result, result, dim=factor)
+    result = xmipp_image_resize(result, OutputInfo("vol"), dim=factor)
     
     return result
 
@@ -46,10 +52,33 @@ def main():
     metadata = download_emdb_metadata(41510)
 
     pdb_file = delete_hidrogens(PDB_PATH)
-    # pdb_file = Proxy.proxy_for_lines(pdb_file, file_ext="pdb")
+    pdb_file = Proxy.proxy_for_lines(pdb_file, file_ext="pdb")
+
+    PDB_VOL_OUT = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/volume_pdb_output"
+
+    F = PDB_VOL_OUT #"emv-tools/data/emd_41510/volume_pdb_output"
 
     volume = resize_volume(VOLUME_PATH, size=metadata.size, resolution=metadata.resolution)
-    print(volume)
+    pdb_volume = xmipp_volume_from_pdb(
+        pdb_file,
+        F,
+        center_pdb="-v 0",
+        sampling=metadata.sampling,
+        size=metadata.size
+    )
+    # .typed("vol")
+    
+    aligned = xmipp_volume_align(
+        OutputInfo(file_ext="vol"),
+        embdb_map=EMD_MAP,
+        volume=PDB_VOL_OUT + ".vol"
+    )
+
+
+    import os
+    print(os.path.getsize(aligned.path))
+
+    # print(pdb_file, volume)
     # print(pdb_file)
 
     # create_deepres_mask(volume, pdb_file, sampling=metadata.sampling, size=metadata.size)
