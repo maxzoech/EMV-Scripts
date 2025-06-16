@@ -83,7 +83,20 @@ def main():
 
     volume = resize_volume(VOLUME_PATH, size=metadata.size, resolution=metadata.resolution)
     
-    print(deep_res_mask, volume)
+    deep_res_mask = xmipp_transform_threshold(
+        deep_res_mask,
+        OutputInfo("vol"),
+        select="below 0.15",
+        substitute="binarize"
+    )
+
+    deepres_output = resize_volume(
+        VOLUME_PATH,
+        size=metadata.size,
+        resolution=metadata.resolution
+    )
+
+    print(deep_res_mask, volume, deepres_output)
 
     # create_deepres_mask(volume, pdb_file, sampling=metadata.sampling, size=metadata.size)
 

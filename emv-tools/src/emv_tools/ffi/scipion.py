@@ -110,3 +110,19 @@ def xmipp_transform_morphology(inputs: str, outputs: str, *, binary_operation: s
 )
 def xmipp_pdb_label_from_volume(output: str, *, pdb: str, volume: str, mask: str, sampling, origin: str):
     pass
+
+
+@proxify
+@partial(
+    foreign_function,
+    args_map={
+        "inputs": "i",
+        "outputs": "o",
+    },
+    args_validation={
+        "inputs": "(.+)\.vol",
+        "outputs": "(.+)\.vol",
+    },
+)
+def xmipp_transform_threshold(inputs: str, outputs: str, *, select: str, substitute: str):
+    pass
