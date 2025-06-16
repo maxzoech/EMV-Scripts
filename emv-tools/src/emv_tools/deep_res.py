@@ -8,12 +8,12 @@ from functools import partial
 import tempfile
 
 VOLUME_PATH = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/Runs/000727_XmippProtDeepRes/extra/deepRes_resolution_originalSize.vol"
-EMD_MAP = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/emd_41510.map"
+EMDB_MAP = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/emd_41510.map"
 CIF_FILE = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/8tqo.cif"
 
 PDB_PATH = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/structure.pdb"
 
-from emv_tools.metadata import download_emdb_metadata
+from emv_tools.metadata import EMDBMetadata, download_emdb_metadata
 
 def resize_volume(input_path: str, size: int, resolution: int):
     resize_samp = 1.0 if resolution >= 2.7 else 0.5 
@@ -42,16 +42,7 @@ def delete_hidrogens(pdb_path: os.PathLike):
     return lines
 
 
-def main():
-
-    metadata = download_emdb_metadata(41510)
-
-    # pdb_file = delete_hidrogens(PDB_PATH)
-    pdb_file = ReferenceProxy(PDB_PATH, owned=False) # Set owned to false to avoid deleting the PDB file
-    #TempFileProxy.proxy_for_lines(pdb_file, file_ext="pdb")
-
-
-    volume = resize_volume(VOLUME_PATH, size=metadata.size, resolution=metadata.resolution)
+def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
     
     volume_pdb = xmipp_volume_from_pdb(
         pdb_file,
@@ -59,13 +50,11 @@ def main():
         center_pdb="-v 0",
         sampling=metadata.sampling,
         size=metadata.size
-    ).reasign("vol")
-
-    print(volume_pdb)
+    ).reassign("vol")
 
     aligned = xmipp_volume_align(
         OutputInfo(file_ext="vol"),
-        embdb_map=EMD_MAP,
+        embdb_map=emdb_map,
         volume=volume_pdb
     )
 
@@ -83,8 +72,19 @@ def main():
         size=2
     )
 
-    import os
-    print(os.path.getsize(mask.path))
+    return mask
+
+def main():
+
+    metadata = download_emdb_metadata(41510)
+
+    # pdb_file = delete_hidrogens(PDB_PATH)
+    # pdb_file = ReferenceProxy(PDB_PATH, owned=False) # Set owned to false to avoid deleting the PDB file
+    #TempFileProxy.proxy_for_lines(pdb_file, file_ext="pdb")
+
+
+    volume = resize_volume(VOLUME_PATH, size=metadata.size, resolution=metadata.resolution)
+    deep_res_mask = create_deepres_mask(PDB_PATH, EMDB_MAP, metadata)
 
     # print(pdb_file, volume)
     # print(pdb_file)

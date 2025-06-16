@@ -14,6 +14,32 @@ from .func_params import extract_func_params
 
 
 class Proxy:
+    """
+    A proxy of an underlying temporary file
+    
+    When working with external xmipp functions, often a temporary file location 
+    is necessary to store intermediate results. You can either store those
+    in a custom location, create temporary files yourself using the `tempfile`
+    module or use proxies.
+
+    Proxies are lightweight Python objects that hold a reference to an
+    underlying file. You can pass those proxies to any function that is
+    decorated with the `@proxify` decorator for arguments that expect a file
+    path. The `proxify` function will pass the associated file path to the
+    original function. For more information see `proxify`.
+
+    Proxies are typed using the file type of the underlying extension. Foreign
+    scipion/xmipp functions can validate these extensions using regex to verify
+    that the input data has the correct format. If the file extension is `None`,
+    it is interpreted as any type.
+    
+    Proxies can either be owned or unowned. Owned proxies delete the underlying
+    file when the Python object is deleted, unowned proxies do not. Except for
+    very few use cases you should use owned proxies (Don't wrap input files 
+    in unowned proxies, as you can pass the path directly to @proxify'ed
+    functions)
+    """
+
     def __init__(self, owned=False):
         self.owned = owned
 
@@ -35,7 +61,33 @@ class Proxy:
 
 
 class TempFileProxy(Proxy):
+    """
+    A proxy that is backed by a temporary file.
+    
+    When you initialize this class, a temporary file is created to store
+    intermediate results. You usually do not create instances of this class,
+    and instead describe your proxy using the 'OutputInfo' named tuple and have
+    them created in the @proxify function.
+
+    Check the documentation for `Proxy` for more information on proxies.
+
+    Args:
+        - file_ext: The file extension of the new file. `None` if the file
+        should not have a type
+    """
+
     def __init__(self, file_ext=None):
+        """
+        Create a proxy backed by a temporary file.
+
+        In most cases you should pass an instance of `OutputInfo` to your
+        function and let `@proxify` handle the instance creation.
+
+        Args:
+            - file_ext: The file extension of the underlying file, which is
+            also interpreted as the _type_ of the proxy. If `None` the file will
+            have no extension and the proxy is interpreted to be typed as any.
+        """
         super().__init__(owned=True)
         self.file_ext = file_ext
 
@@ -54,7 +106,21 @@ class TempFileProxy(Proxy):
 
         return proxy
     
-    def reasign(self, new_ext: str):
+    def reassign(self, new_ext: str):
+        """
+        Creates a reference proxy with specific type.
+
+        This is useful if the underlying xmipp function adds its own file
+        extension to the output path. In that case you can pass an untyped
+        proxy that will pass a path like /tmp/xzy to xmipp; xmipp will write
+        the result to a path like /tmp/xzy.vol. This function will create a
+        ReferenceProxy for path '/tmp/xzy.vol'.
+
+        The created ReferenceProxy is owned.
+
+        Args:
+            - new_ext: The file extension of the file created by scipion/xmipp
+        """
         assert self.file_ext is None
 
         new_path = self.path + f".{new_ext}"
@@ -66,6 +132,25 @@ class TempFileProxy(Proxy):
         return ReferenceProxy(new_path, owned=True)
 
 class ReferenceProxy(Proxy):
+    """
+    A proxy for an existing file
+
+    Use this proxy if you want to wrap an existing file in a proxy.
+
+    **Note:** You do not need to wrap input files in a `ReferenceProxy`, you
+    can pass them directly to function decorated with `proxify`
+
+    **Warning:** If you set owned=True, make sure that only one proxy object
+    refers to the file. Otherwise the underlying file will be deleted if one of
+    our instances gets deallocated as `Proxy` objects are always assumed to have
+    a one-to-one mapping with an underlying file.
+
+    Args:
+        - path: The path of the underlying file
+        - owned: If the file should be owned by the proxy. Owned files are
+        deleted when the proxy object is dealloced
+    """
+
     def __init__(self, path: os.PathLike, owned=False):
         super().__init__(owned)
         self._path = path
@@ -89,6 +174,24 @@ def _replace_with_proxy(name, value):
 
 
 def proxify(f, map_inputs=True, map_outputs=True):
+    """
+    Make a function compatible with proxies.
+    
+    External function wrapped in the `ffi` module have a C-style interface
+    that reads input files and writes its output to files. You can use them by
+    passing file paths or creating temporary paths directly.
+
+    If you do not want to managed temporary files directly, you can proxify a
+    function that accepts file paths as parameters:
+        * If you pass a proxy object to any input argument, its path is passed
+        to the wrapped function
+        * For output parameters, pass an instance of the `OutputInfo` object.
+        This function will create a proxy object, pass the path of temporary
+        file to the underlying function and return the proxy objects.
+
+    **Note:** When using `proxify` to return output values, the original return
+    value of the function is lost.
+    """
 
     signature = inspect.signature(f)
 
@@ -99,7 +202,7 @@ def proxify(f, map_inputs=True, map_outputs=True):
         except AttributeError as e:
             logging.warning(
                 "Could not check function arguments at call site; this" \
-                "may lead to undefined behaviour and may be due " \
+                "may lead to undefined behavior and may be due " \
                 "to an additional function wrapper: Please make sure to " \
                 "decorate your wrapper with @functools.wraps(f)"
             )
