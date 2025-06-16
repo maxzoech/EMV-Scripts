@@ -2,7 +2,7 @@ import os
 
 import xmippLib
 from .ffi.scipion import *
-from .utils.proxy import ReferenceProxy, OutputInfo
+from .utils.proxy import Proxy, OutputInfo
 
 from functools import partial
 import tempfile
@@ -15,7 +15,10 @@ PDB_PATH = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41
 
 from emv_tools.metadata import EMDBMetadata, download_emdb_metadata
 
-def resize_volume(input_path: str, size: int, resolution: int):
+@proxify
+def resize_volume(input_path, size: int, resolution: int):
+    print(f"Resize volume input: {input_path}")
+    
     resize_samp = 1.0 if resolution >= 2.7 else 0.5 
 
     V = xmippLib.Image(input_path).getData()
@@ -29,10 +32,6 @@ def resize_volume(input_path: str, size: int, resolution: int):
     result = xmipp_image_resize(result, OutputInfo("vol"), dim=factor)
     
     return result
-
-# @partial(proxify, outputs=OutputInfo(arg_name="output", file_ext="pdbmap"))
-# def create_deepres_mask(volume, pdb, output, *, sampling, size):
-#     print(volume, pdb, output, sampling, size)
 
 
 def delete_hidrogens(pdb_path: os.PathLike):
@@ -78,16 +77,13 @@ def main():
 
     metadata = download_emdb_metadata(41510)
 
-    # pdb_file = delete_hidrogens(PDB_PATH)
-    # pdb_file = ReferenceProxy(PDB_PATH, owned=False) # Set owned to false to avoid deleting the PDB file
-    #TempFileProxy.proxy_for_lines(pdb_file, file_ext="pdb")
-
+    # Create DeepRes mask
+    deep_res_mask = create_deepres_mask(PDB_PATH, EMDB_MAP, metadata)
+    deep_res_mask = resize_volume(deep_res_mask, metadata.size, metadata.resolution)
 
     volume = resize_volume(VOLUME_PATH, size=metadata.size, resolution=metadata.resolution)
-    deep_res_mask = create_deepres_mask(PDB_PATH, EMDB_MAP, metadata)
-
-    # print(pdb_file, volume)
-    # print(pdb_file)
+    
+    print(deep_res_mask, volume)
 
     # create_deepres_mask(volume, pdb_file, sampling=metadata.sampling, size=metadata.size)
 

@@ -197,15 +197,16 @@ def proxify(f, map_inputs=True, map_outputs=True):
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-        try:
-            f.__wrapped__(*args, **kwargs)
-        except AttributeError as e:
-            logging.warning(
-                "Could not check function arguments at call site; this" \
-                "may lead to undefined behavior and may be due " \
-                "to an additional function wrapper: Please make sure to " \
-                "decorate your wrapper with @functools.wraps(f)"
-            )
+        # try:
+        #     f.__wrapped__(*args, **kwargs)
+        # except AttributeError as e:
+        #     logging.warning(
+        #         "Could not check function arguments at call site; this" \
+        #         "may lead to undefined behavior and may be due " \
+        #         "to an additional function wrapper: Please make sure to " \
+        #         "decorate your wrapper with @functools.wraps(f)"
+        #     )
+        # TODO: Verify arguments in extract_func_params
 
         func_args = extract_func_params(args, kwargs, signature.parameters)
         func_args = { k.name: v for k, v in func_args.items() }
@@ -225,7 +226,16 @@ def proxify(f, map_inputs=True, map_outputs=True):
 
 
         out_val = f(**func_args)
-        if not (out_val == 0 or out_val == None):
+
+        outputs = out_val if isinstance(out_val, tuple) else (out_val, )
+        outputs_are_proxies = all([isinstance(o, Proxy) for o in outputs])
+
+        if outputs_are_proxies:
+            # If the outputs are coming from another proxified function, just
+            # return them as is
+            return out_val
+
+        if not (out_val == 0 or out_val == None) and map_outputs:
             logging.warning(
                 f"Wrapped function returns non-zero value; this value {out_val} will be discared"
             )
