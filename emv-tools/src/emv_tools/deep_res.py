@@ -16,7 +16,33 @@ PDB_PATH = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41
 from emv_tools.metadata import EMDBMetadata, download_emdb_metadata
 
 @proxify
-def resize_volume(input_path, size: int, resolution: int):
+def resize_volume(input_path, resolution, sampling):
+
+    if resolution >= 2.7:
+        new_sampling = 1.0
+    else:
+        new_sampling = 0.5
+
+    sampling_factor = sampling / new_sampling
+    fourier_val = sampling / (2 * new_sampling)
+
+    inputs = input_path
+    if sampling < new_sampling:
+        inputs = xmipp_transform_filter(
+            inputs,
+            OutputInfo("vol"),
+            fourier=f"low_pass {fourier_val}",
+        )
+
+    return xmipp_image_resize(
+        inputs,
+        OutputInfo("vol"),
+        factor=sampling_factor
+    )
+
+
+@proxify
+def resize_output_volume(input_path, size: int, resolution: int):
     print(f"Resize volume input: {input_path}")
     
     resize_samp = 1.0 if resolution >= 2.7 else 0.5 
@@ -26,10 +52,10 @@ def resize_volume(input_path, size: int, resolution: int):
 
     factor = size / z
     final_samp = resize_samp / factor
-    fourier_V = resize_samp / 2 * final_samp
+    fourier_val = resize_samp / 2 * final_samp
 
-    result = xmipp_transform_filter(input_path, OutputInfo("vol"), fourier=f"low_pass {fourier_V}")
-    result = xmipp_image_resize(result, OutputInfo("vol"), dim=factor)
+    result = xmipp_transform_filter(input_path, OutputInfo("vol"), fourier=f"low_pass {fourier_val}")
+    result = xmipp_image_resize(result, OutputInfo("vol"), dim=size)
     
     return result
 
@@ -76,13 +102,11 @@ def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
 def main():
 
     metadata = download_emdb_metadata(41510)
-
+    
     # Create DeepRes mask
     deep_res_mask = create_deepres_mask(PDB_PATH, EMDB_MAP, metadata)
     deep_res_mask = resize_volume(deep_res_mask, metadata.size, metadata.resolution)
 
-    volume = resize_volume(VOLUME_PATH, size=metadata.size, resolution=metadata.resolution)
-    
     deep_res_mask = xmipp_transform_threshold(
         deep_res_mask,
         OutputInfo("vol"),
@@ -90,13 +114,26 @@ def main():
         substitute="binarize"
     )
 
-    deepres_output = resize_volume(
+    deepres_output = resize_output_volume(
         VOLUME_PATH,
         size=metadata.size,
         resolution=metadata.resolution
     )
 
-    print(deep_res_mask, volume, deepres_output)
+    pdb_size = os.path.getsize(PDB_PATH)
+    volume_size = os.path.getsize(deepres_output.path)
+    mask_size = os.path.getsize(deep_res_mask.path)
+
+    print(f"Sizes: pdb {pdb_size}, volume: {volume_size}, mask: {mask_size}")
+
+    xmipp_pdb_label_from_volume(
+        "../data/output.atom.pdb", #OutputInfo("atom.pdb"), 
+        pdb=PDB_PATH,
+        volume=deepres_output,
+        mask=deep_res_mask,
+        sampling=metadata.sampling,
+        origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
+    )
 
     # create_deepres_mask(volume, pdb_file, sampling=metadata.sampling, size=metadata.size)
 

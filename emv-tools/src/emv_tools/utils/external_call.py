@@ -73,7 +73,10 @@ def foreign_function(f, args_map=None, args_validation=None, postprocess_fn=None
     def wrapper(*args, **kwargs):
         _ = f(*args, **kwargs) # Call function for Python to throw error if args and kwargs aren't passed correctly
 
-        merged_args = extract_func_params(args, kwargs, params)        
+        merged_args = extract_func_params(args, kwargs, params)
+
+        # Filter args that are None to support optional arguments
+        merged_args = {k: v for k, v in merged_args.items() if v is not None}    
 
         # Validate inputs before calling external program
         # arg_names = {k.name for k in merged_args}

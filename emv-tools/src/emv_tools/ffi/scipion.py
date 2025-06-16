@@ -25,7 +25,7 @@ def xmipp_transform_filter(inputs: str, outputs: str, *, fourier: str) -> int:
         "inputs": "(.+)\.vol"
     }
 )
-def xmipp_image_resize(inputs: str, outputs: str, *, dim: int) -> int:
+def xmipp_image_resize(inputs: str, outputs: str, *, factor=None, dim=None) -> int:
     pass
 
 
@@ -125,4 +125,21 @@ def xmipp_pdb_label_from_volume(output: str, *, pdb: str, volume: str, mask: str
     },
 )
 def xmipp_transform_threshold(inputs: str, outputs: str, *, select: str, substitute: str):
+    pass
+
+
+@proxify
+@partial(
+    foreign_function,
+    args_map={
+        "outputs": "o",
+        "volume": "vol",
+    },
+    args_validation={
+        "outputs": "(.+)\.atom.pdb",
+        "pdb": "(.+)\.pdb",
+        "volume": "(.+)\.vol",
+    }
+)
+def xmipp_pdb_label_from_volume(outputs, *, pdb: str, volume: str, mask: str, sampling: str, origin: str):
     pass
