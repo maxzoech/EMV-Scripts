@@ -12,8 +12,33 @@ from collections import namedtuple
 
 from .func_params import extract_func_params
 
+
 class Proxy:
+    def __init__(self, owned=False):
+        self.owned = owned
+
+    @property
+    def path(self):
+        raise NotImplementedError("Implement in subclass")
+    
+    def __del__(self):
+        try:
+            if self.owned == True:
+                os.remove(self.path)
+                print(f"Removed file at: {self.path}")
+        except:
+            pass # Fail silently
+
+    def __str__(self):
+        is_owned = "owned" if self.owned else "unowned"
+        return f"<{self.__class__.__name__} for {self.path} ({is_owned})>"
+
+
+class TempFileProxy(Proxy):
     def __init__(self, file_ext=None):
+        super().__init__(owned=True)
+        self.file_ext = file_ext
+
         suffix = "" if file_ext is None else f".{file_ext}"
         self.temp_file = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
 
@@ -23,27 +48,32 @@ class Proxy:
     
     @classmethod
     def proxy_for_lines(cls, lines: List[str], *, file_ext):
-        proxy = Proxy(file_ext)
+        proxy = TempFileProxy(file_ext)
         with open(proxy.temp_file.name, "w") as f:
             f.write("".join(lines))
 
         return proxy
     
-    def typed(self, file_ext):
-        new_proxy = Proxy(file_ext)
-        shutil.copy(self.path, new_proxy.path)
+    def reasign(self, new_ext: str):
+        assert self.file_ext is None
 
-        import os
-        print(os.path.getsize(self.path), os.path.getsize(new_proxy.path))
+        new_path = self.path + f".{new_ext}"
+        if not os.path.exists(new_path):
+            raise FileNotFoundError(f"No file found at '{new_path}'. Make sure the file extension matches. \
+                                    If the external program writes files to a different known location, \
+                                    initialize ReferenceProxy directly.")
+    
+        return ReferenceProxy(new_path, owned=True)
 
-        return new_proxy
+class ReferenceProxy(Proxy):
+    def __init__(self, path: os.PathLike, owned=False):
+        super().__init__(owned)
+        self._path = path
 
-    def __del__(self):
-        try:
-            os.remove(self.temp_file.name)
-            print(f"Removed file at: {self.temp_file.name}")
-        except:
-            pass # Fail silently
+    @property
+    def path(self):
+        return self._path
+
 
 OutputInfo = namedtuple("OutputInfo", ["file_ext"])
 
@@ -52,7 +82,7 @@ def _replace_with_proxy(name, value):
         return value
     
     if isinstance(value, OutputInfo):
-        new_proxy = Proxy(file_ext=value.file_ext)
+        new_proxy = TempFileProxy(file_ext=value.file_ext)
         return new_proxy
     
     raise ValueError(f"Value for {name} must be a Proxy or OutputInfo object if map_outputs=True")
@@ -83,7 +113,7 @@ def proxify(f, map_inputs=True, map_outputs=True):
 
         output_proxies = []
         if map_outputs:
-            func_args = { k: Proxy(v.file_ext) if isinstance(v, OutputInfo) else v for k, v in func_args.items() }
+            func_args = { k: TempFileProxy(v.file_ext) if isinstance(v, OutputInfo) else v for k, v in func_args.items() }
 
             for k, v in func_args.items():
                 if isinstance(v, Proxy):

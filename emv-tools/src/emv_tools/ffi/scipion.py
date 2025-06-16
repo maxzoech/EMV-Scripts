@@ -70,7 +70,43 @@ def xmipp_volume_align(outputs: str, *, embdb_map: str, volume: str, local="--ap
 @proxify
 @partial(
     foreign_function,
-    args_map={"output": "o", "volume": "vol"},
+    args_map={
+        "aligned_vol": "i",
+        "outputs": "o",
+    },
+    args_validation={
+        "aligned_vol": "(.+)\.vol",
+        "outputs": "(.+)\.vol",
+    },
+)
+def xmipp_transform_threshold(aligned_vol: str, outputs: str, *, select: str, substitute: str):
+    pass
+
+
+@proxify
+@partial(
+    foreign_function,
+    args_map={
+        "inputs": "i",
+        "outputs": "o",
+        "binary_operation": "binaryOperation"
+    },
+    args_validation={
+        "inputs": "(.+)\.vol",
+        "outputs": "(.+)\.vol",
+    },
+)
+def xmipp_transform_morphology(inputs: str, outputs: str, *, binary_operation: str, size: int):
+    pass
+
+
+@proxify
+@partial(
+    foreign_function,
+    args_map={
+        "output": "o",
+        "volume": "vol",
+    },
 )
 def xmipp_pdb_label_from_volume(output: str, *, pdb: str, volume: str, mask: str, sampling, origin: str):
     pass

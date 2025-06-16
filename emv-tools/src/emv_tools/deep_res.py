@@ -1,13 +1,8 @@
 import os
 
 import xmippLib
-from .ffi.scipion import (
-    xmipp_transform_filter,
-    xmipp_image_resize,
-    xmipp_volume_from_pdb,
-    xmipp_volume_align
-)
-from .utils.proxy import Proxy, OutputInfo
+from .ffi.scipion import *
+from .utils.proxy import ReferenceProxy, OutputInfo
 
 from functools import partial
 import tempfile
@@ -51,32 +46,45 @@ def main():
 
     metadata = download_emdb_metadata(41510)
 
-    pdb_file = delete_hidrogens(PDB_PATH)
-    pdb_file = Proxy.proxy_for_lines(pdb_file, file_ext="pdb")
+    # pdb_file = delete_hidrogens(PDB_PATH)
+    pdb_file = ReferenceProxy(PDB_PATH, owned=False) # Set owned to false to avoid deleting the PDB file
+    #TempFileProxy.proxy_for_lines(pdb_file, file_ext="pdb")
 
-    PDB_VOL_OUT = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/volume_pdb_output"
-
-    F = PDB_VOL_OUT #"emv-tools/data/emd_41510/volume_pdb_output"
 
     volume = resize_volume(VOLUME_PATH, size=metadata.size, resolution=metadata.resolution)
-    pdb_volume = xmipp_volume_from_pdb(
+    
+    volume_pdb = xmipp_volume_from_pdb(
         pdb_file,
-        F,
+        OutputInfo(None),
         center_pdb="-v 0",
         sampling=metadata.sampling,
         size=metadata.size
-    )
-    # .typed("vol")
-    
+    ).reasign("vol")
+
+    print(volume_pdb)
+
     aligned = xmipp_volume_align(
         OutputInfo(file_ext="vol"),
         embdb_map=EMD_MAP,
-        volume=PDB_VOL_OUT + ".vol"
+        volume=volume_pdb
     )
 
+    mask = xmipp_transform_threshold(
+        aligned,
+        OutputInfo(file_ext="vol"),
+        select="below 0.02",
+        substitute="binarize"
+    )
+
+    mask = xmipp_transform_morphology(
+        mask,
+        OutputInfo("vol"),
+        binary_operation="dilation",
+        size=2
+    )
 
     import os
-    print(os.path.getsize(aligned.path))
+    print(os.path.getsize(mask.path))
 
     # print(pdb_file, volume)
     # print(pdb_file)
