@@ -3,6 +3,7 @@ import os
 import xmippLib
 from .ffi.scipion import *
 from .utils.proxy import Proxy, TempFileProxy, OutputInfo
+from .utils.conversion import load_cif_as_pdb
 
 from functools import partial
 import tempfile
@@ -116,6 +117,12 @@ def main():
     pdb_file = download_pdb_model(metadata.pdb_id, "../data/input_data")
     pdb_file = TempFileProxy.proxy_for_lines(delete_hidrogens(pdb_file), file_ext="ent")
 
+    # pdb_contents = load_cif_as_pdb(CIF_FILE)
+    # pdb_file = TempFileProxy.proxy_for_lines(pdb_contents, file_ext="ent")
+
+    # print(pdb_contents)
+
+    # return
     # Create DeepRes mask
     deep_res_mask = create_deepres_mask(pdb_file, EMDB_MAP, metadata)
     deep_res_mask = resize_volume(deep_res_mask, metadata.resolution, metadata.sampling)    
@@ -153,7 +160,7 @@ def main():
     # print(f"Sizes: pdb {pdb_size}, volume: {volume_size}, mask: {mask_size}")
 
     xmipp_pdb_label_from_volume(
-        "../data/output.atom.pdb", #OutputInfo("atom.pdb"), 
+        "../data/output.atom.pdb", 
         pdb=PDB_PATH,
         volume=deepres_resized,
         mask=deep_res_mask,
