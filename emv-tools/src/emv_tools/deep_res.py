@@ -111,59 +111,39 @@ def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
 def main():
 
     os.makedirs("../data/input_data", exist_ok=True)
+
+    # Download EMDB Info
     embd_map = download_emdb_map(41510, path="../data/input_data")
     metadata = download_emdb_metadata(41510)
 
+    # Download PDB model and remove hydrogen
     pdb_file = download_pdb_model(metadata.pdb_id, "../data/input_data")
     pdb_file = TempFileProxy.proxy_for_lines(delete_hidrogens(pdb_file), file_ext="ent")
 
-    # pdb_contents = load_cif_as_pdb(CIF_FILE)
-    # pdb_file = TempFileProxy.proxy_for_lines(pdb_contents, file_ext="ent")
-
-    # print(pdb_contents)
-
-    # return
     # Create DeepRes mask
-    deep_res_mask = create_deepres_mask(pdb_file, EMDB_MAP, metadata)
-    deep_res_mask = resize_volume(deep_res_mask, metadata.resolution, metadata.sampling)    
+    deepres_mask = create_deepres_mask(pdb_file, str(embd_map), metadata)
+    deepres_mask = resize_volume(deepres_mask, metadata.resolution, metadata.sampling)    
 
-    deep_res_mask = xmipp_transform_threshold(
-        deep_res_mask,
+    deepres_mask = xmipp_transform_threshold(
+        deepres_mask,
         OutputInfo("vol"),
         select="below 0.15",
         substitute="binarize"
     )
 
+    # Resize DeepRes map to fit mask
     deepres_resized = resize_output_volume(
         VOLUME_PATH,
         metadata.resolution,
         metadata.size
     )
 
-    # import shutil
-    # shutil.copy(
-    #     deep_res_mask.path,
-    #     "../data/deepres_mask-aligned-resized.vol"
-    # )
-
-    # shutil.copy(
-    #     deepres_resized.path,
-    #     "../data/deep_res-output-resized.vol"
-    # )
-    # return
-
-
-    # pdb_size = os.path.getsize(PDB_PATH)
-    # volume_size = os.path.getsize(deepres_resized.path)
-    # mask_size = os.path.getsize(deep_res_mask.path)
-
-    # print(f"Sizes: pdb {pdb_size}, volume: {volume_size}, mask: {mask_size}")
-
+    # Annotate PDB file with resolution information
     xmipp_pdb_label_from_volume(
         "../data/output.atom.pdb", 
         pdb=PDB_PATH,
         volume=deepres_resized,
-        mask=deep_res_mask,
+        mask=deepres_mask,
         sampling=metadata.sampling,
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )
