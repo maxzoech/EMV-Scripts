@@ -124,6 +124,7 @@ class TempFileProxy(Proxy):
         assert self.file_ext is None
 
         new_path = self.path + f".{new_ext}"
+
         if not os.path.exists(new_path):
             raise FileNotFoundError(f"No file found at '{new_path}'. Make sure the file extension matches. \
                                     If the external program writes files to a different known location, \

@@ -38,7 +38,7 @@ def xmipp_image_resize(inputs: str, outputs: str, *, factor=None, dim=None) -> i
         "center_pdb": "centerPDB"
     },
     args_validation={
-        "inputs": "(.+)\.pdb",
+        "inputs": "(.+)\.ent",
         # "outputs": "(.+)\.vol",
     }
 )

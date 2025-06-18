@@ -2,7 +2,7 @@ import os
 
 import xmippLib
 from .ffi.scipion import *
-from .utils.proxy import Proxy, OutputInfo
+from .utils.proxy import Proxy, TempFileProxy, OutputInfo
 
 from functools import partial
 import tempfile
@@ -13,7 +13,7 @@ CIF_FILE = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD
 
 PDB_PATH = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/structure.pdb"
 
-from emv_tools.metadata import EMDBMetadata, download_emdb_metadata
+from emv_tools.download import EMDBMetadata, download_emdb_map, download_emdb_metadata, download_pdb_model
 
 @proxify
 def resize_volume(input_path, resolution, sampling):
@@ -42,22 +42,30 @@ def resize_volume(input_path, resolution, sampling):
 
 
 @proxify
-def resize_output_volume(input_path, size: int, resolution: int):
-    print(f"Resize volume input: {input_path}")
-    
-    resize_samp = 1.0 if resolution >= 2.7 else 0.5 
+def resize_output_volume(output_volume, resolution: int, size: int):
+    if resolution >= 2.7:
+        resize_samp = 1.0
+    else:
+        resize_samp = 0.5
 
-    V = xmippLib.Image(input_path).getData()
-    (z, _, _) = V.shape
+    out_v = xmippLib.Image(output_volume).getData()
+    z, _, _ = out_v.shape
 
     factor = size / z
     final_samp = resize_samp / factor
-    fourier_val = resize_samp / 2 * final_samp
+    fourier_v = resize_samp / 2 * final_samp
 
-    result = xmipp_transform_filter(input_path, OutputInfo("vol"), fourier=f"low_pass {fourier_val}")
-    result = xmipp_image_resize(result, OutputInfo("vol"), dim=size)
-    
-    return result
+    output = xmipp_transform_filter(
+        output_volume,
+        OutputInfo("vol"),
+        fourier="low_pass %f" % fourier_v
+    )
+
+    return xmipp_image_resize(
+        output,
+        OutputInfo("vol"),
+        dim=size
+    )
 
 
 def delete_hidrogens(pdb_path: os.PathLike):
@@ -101,11 +109,16 @@ def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
 
 def main():
 
+    os.makedirs("../data/input_data", exist_ok=True)
+    embd_map = download_emdb_map(41510, path="../data/input_data")
     metadata = download_emdb_metadata(41510)
-    
+
+    pdb_file = download_pdb_model(metadata.pdb_id, "../data/input_data")
+    pdb_file = TempFileProxy.proxy_for_lines(delete_hidrogens(pdb_file), file_ext="ent")
+
     # Create DeepRes mask
-    deep_res_mask = create_deepres_mask(PDB_PATH, EMDB_MAP, metadata)
-    deep_res_mask = resize_volume(deep_res_mask, metadata.size, metadata.resolution)
+    deep_res_mask = create_deepres_mask(pdb_file, EMDB_MAP, metadata)
+    deep_res_mask = resize_volume(deep_res_mask, metadata.resolution, metadata.sampling)    
 
     deep_res_mask = xmipp_transform_threshold(
         deep_res_mask,
@@ -114,49 +127,40 @@ def main():
         substitute="binarize"
     )
 
-    deepres_output = resize_output_volume(
+    deepres_resized = resize_output_volume(
         VOLUME_PATH,
-        size=metadata.size,
-        resolution=metadata.resolution
+        metadata.resolution,
+        metadata.size
     )
 
-    pdb_size = os.path.getsize(PDB_PATH)
-    volume_size = os.path.getsize(deepres_output.path)
-    mask_size = os.path.getsize(deep_res_mask.path)
+    # import shutil
+    # shutil.copy(
+    #     deep_res_mask.path,
+    #     "../data/deepres_mask-aligned-resized.vol"
+    # )
 
-    print(f"Sizes: pdb {pdb_size}, volume: {volume_size}, mask: {mask_size}")
+    # shutil.copy(
+    #     deepres_resized.path,
+    #     "../data/deep_res-output-resized.vol"
+    # )
+    # return
+
+
+    # pdb_size = os.path.getsize(PDB_PATH)
+    # volume_size = os.path.getsize(deepres_resized.path)
+    # mask_size = os.path.getsize(deep_res_mask.path)
+
+    # print(f"Sizes: pdb {pdb_size}, volume: {volume_size}, mask: {mask_size}")
 
     xmipp_pdb_label_from_volume(
         "../data/output.atom.pdb", #OutputInfo("atom.pdb"), 
         pdb=PDB_PATH,
-        volume=deepres_output,
+        volume=deepres_resized,
         mask=deep_res_mask,
         sampling=metadata.sampling,
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )
 
-    # create_deepres_mask(volume, pdb_file, sampling=metadata.sampling, size=metadata.size)
-
-    # with tempfile.NamedTemporaryFile(suffix=".vol") as file:
-    #     print(file.name)
-
-
-    # io.save("../data/structure.pdb")
-
-    # exit_code = xmipp_pdb_label_from_volume(
-    #     "/dev/null/deepres/atom.pub",
-    #     pdb="pdb_path",
-    #     volume=VOLUME_PATH,
-    #     mask="mask_path",
-    #     sampling="sampling_path",
-    #     origin="origin"
-    # )
-
-#     # subprocess.run(["scipion", "run", "xmipp_pdb_label_from_volume"])
-
-#     # os.system(
-#     #     'scipion3'
-#     # )
 
 if __name__ == "__main__":
     main()
