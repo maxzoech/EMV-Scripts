@@ -6,6 +6,7 @@ from .ffi.scipion import *
 from .utils.proxy import Proxy, TempFileProxy, OutputInfo
 from .utils.conversion import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
+from .utils.bws import save_for_bws
 
 from functools import partial
 from copy import copy
@@ -107,8 +108,8 @@ def main():
     )
 
     # Join the two parts
-    xmipp_pdb_label_from_volume(
-        os.path.abspath("../data/output.atom.pdb"), 
+    deepres_atomic_model = xmipp_pdb_label_from_volume(
+        OutputInfo(file_ext="atom.pdb"), # os.path.abspath("../data/output.atom.pdb"), 
         pdb=pdb_file,
         volume=volume_resized,
         mask=deepres_mask,
@@ -116,6 +117,12 @@ def main():
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )
 
+    save_for_bws(
+        deepres_atomic_model,
+        "../data/EMB-41510_converted.json",
+        volume_map="EMD-41510",
+        atomic_model="8tqo"
+    )
 
 
 if __name__ == "__main__":

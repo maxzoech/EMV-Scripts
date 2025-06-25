@@ -1,4 +1,6 @@
 import json
+import datetime
+
 from .proxy import proxify
 from .validate_pdb import _validate_atom_line
 
@@ -8,7 +10,7 @@ Atom = namedtuple("Atom", ["name", "res_seq_name", "res_seq_number", "chain", "v
 
 
 @proxify
-def extract_chains(input_path):
+def save_for_bws(input_path, output_path, *, volume_map, atomic_model):
     with open(input_path) as file:
         
         chains_dict = {}
@@ -39,17 +41,17 @@ def extract_chains(input_path):
             chains.append(chain)
 
         outputs = {
-            "resource": "DeepRes-Scores",
+            "resource": "DeepRes-Scores (VRS)",
             "entry": {
-                "volume_map": "",
-                "atomic_model": "",
-                "date": "" 
+                "volume_map": volume_map,
+                "atomic_model": atomic_model,
+                "date": datetime.date.today().isoformat(),
             },
             "chains": chains
         }
 
 
-        with open("../data/converted.json", "w") as f:
+        with open(output_path, "w") as f:
             json.dump(outputs, f)
         
 
