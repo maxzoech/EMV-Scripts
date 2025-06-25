@@ -223,7 +223,7 @@ def proxify(f, map_inputs=True, map_outputs=True):
             for k, v in func_args.items():
                 if isinstance(v, Proxy):
                     output_proxies.append(v)
-                    func_args[k] = v.path
+                    func_args[k] = os.path.abspath(v.path)
 
 
         out_val = f(**func_args)

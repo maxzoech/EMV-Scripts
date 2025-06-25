@@ -1,16 +1,21 @@
 import os
 
+import numpy as np
 import xmippLib
 from .ffi.scipion import *
 from .utils.proxy import Proxy, TempFileProxy, OutputInfo
 from .utils.conversion import load_cif_as_pdb
+from .utils.validate_pdb import validate_pdb_lines
 
 from functools import partial
+from copy import copy
+from typing import List
 import tempfile
 
-VOLUME_PATH = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/Runs/000727_XmippProtDeepRes/extra/deepRes_resolution_originalSize.vol"
+VOLUME_PATH = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000727_XmippProtDeepRes/extra/deepRes_resolution_originalSize.vol" #chimera_resolution.vol"
 EMDB_MAP = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/emd_41510.map"
 CIF_FILE = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_intermediateData/8tqo.cif"
+MASK_FILE = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000415_XmippProtCreateMask3D/mask.mrc"
 
 PDB_PATH = "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/emd_41510/structure.pdb"
 
@@ -108,45 +113,56 @@ def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
 
     return mask
 
+
 def main():
 
     os.makedirs("../data/input_data", exist_ok=True)
 
     # Download EMDB Info
-    embd_map = download_emdb_map(41510, path="../data/input_data")
-    metadata = download_emdb_metadata(41510)
+    embd_map = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000002_ProtImportVolumes/extra/emd_41510.map"
+    #embd_map = download_emdb_map(41510, path="../data/input_data") # Use .map file form import here
+    metadata = download_emdb_metadata(41510) # Get from header instead
 
-    # Download PDB model and remove hydrogen
-    pdb_file = download_pdb_model(metadata.pdb_id, "../data/input_data")
-    pdb_file = TempFileProxy.proxy_for_lines(delete_hidrogens(pdb_file), file_ext="ent")
+    pdb_file = load_cif_as_pdb(CIF_FILE)
+    validate_pdb_lines(pdb_file)
+
+    pdb_file = TempFileProxy.proxy_for_lines(pdb_file, file_ext="pdb")
 
     # Create DeepRes mask
-    deepres_mask = create_deepres_mask(pdb_file, str(embd_map), metadata)
-    deepres_mask = resize_volume(deepres_mask, metadata.resolution, metadata.sampling)    
+    # deepres_mask = create_deepres_mask(pdb_file, str(embd_map), metadata)
+    # deepres_mask = resize_volume(MASK_FILE, metadata.resolution, metadata.sampling)    
 
-    deepres_mask = xmipp_transform_threshold(
-        deepres_mask,
-        OutputInfo("vol"),
-        select="below 0.15",
-        substitute="binarize"
-    )
+    # deepres_mask = xmipp_transform_threshold(
+    #     deepres_mask,
+    #     OutputInfo("vol"),
+    #     select="below 0.15",
+    #     substitute="binarize"
+    # )
 
-    # Resize DeepRes map to fit mask
-    deepres_resized = resize_output_volume(
-        VOLUME_PATH,
-        metadata.resolution,
-        metadata.size
-    )
+    # deepres_resized = resize_output_volume(
+    #     VOLUME_PATH,
+    #     metadata.resolution,
+    #     metadata.size
+    # )
 
-    # Annotate PDB file with resolution information
+    deepres_resized_vol = xmippLib.Image(VOLUME_PATH)
+    # deepres_mask_vol = xmippLib.Image(deepres_mask.path)
+
+    # print("===== MASK =====")
+    # print(deepres_mask_vol)
+
+    # print("===== RESULTS MAP RESIZED =====")
+    # print(deepres_resized_vol)
+
     xmipp_pdb_label_from_volume(
-        "../data/output.atom.pdb", 
-        pdb=PDB_PATH,
-        volume=deepres_resized,
-        mask=deepres_mask,
+        os.path.abspath("../data/output.atom.pdb"), 
+        pdb=pdb_file,
+        volume=VOLUME_PATH,
+        mask=MASK_FILE,
         sampling=metadata.sampling,
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )
+
 
 
 if __name__ == "__main__":

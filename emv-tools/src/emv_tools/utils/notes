@@ -1,0 +1,5 @@
+Origin:
+
+Voxel at index computed as Floor of dim / 2
+
+xmipp_image_header for .map file -> get metadata

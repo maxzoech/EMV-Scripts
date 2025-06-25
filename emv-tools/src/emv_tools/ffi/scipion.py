@@ -8,7 +8,7 @@ from emv_tools.utils.proxy import proxify
     args_map={"inputs": "i", "outputs": "o"},
     args_validation={
         "outputs": "(.+)\.vol",
-        "inputs": "(.+)\.vol",
+        # "inputs": "(.+)\.vol",
         "fourier": "low_pass [0-9]+\.[0-9]+"
     }
 )
@@ -22,7 +22,7 @@ def xmipp_transform_filter(inputs: str, outputs: str, *, fourier: str) -> int:
     args_map={"inputs": "i", "outputs": "o"},
     args_validation={
         "outputs": "(.+)\.vol",
-        "inputs": "(.+)\.vol"
+        # "inputs": "(.+)\.vol"
     }
 )
 def xmipp_image_resize(inputs: str, outputs: str, *, factor=None, dim=None) -> int:
@@ -38,7 +38,7 @@ def xmipp_image_resize(inputs: str, outputs: str, *, factor=None, dim=None) -> i
         "center_pdb": "centerPDB"
     },
     args_validation={
-        "inputs": "(.+)\.ent",
+        # "inputs": "(.+)\.ent",
         # "outputs": "(.+)\.vol",
     }
 )
@@ -120,7 +120,7 @@ def xmipp_pdb_label_from_volume(output: str, *, pdb: str, volume: str, mask: str
         "outputs": "o",
     },
     args_validation={
-        "inputs": "(.+)\.vol",
+        # "inputs": "(.+)\.vol",
         "outputs": "(.+)\.vol",
     },
 )
@@ -137,7 +137,7 @@ def xmipp_transform_threshold(inputs: str, outputs: str, *, select: str, substit
     },
     args_validation={
         "outputs": "(.+)\.atom.pdb",
-        "pdb": "(.+)\.pdb",
+        # "pdb": "(.+)\.pdb",
         "volume": "(.+)\.vol",
     }
 )
