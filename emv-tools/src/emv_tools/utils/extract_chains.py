@@ -23,7 +23,7 @@ def extract_chains(input_path):
             res_seq_name = line[17: 20]
             res_seq_number = int(line[22:26])
             chain_id = line[21]
-            value = line[54:60]
+            value = float(line[54:60].strip())
             
             atom = Atom(atom_name, res_seq_name=res_seq_name, res_seq_number=res_seq_number, chain=chain_id, value=value)
             chains_dict[chain_id] = (chains_dict[chain_id] + [atom] if chain_id in chains_dict else [atom])

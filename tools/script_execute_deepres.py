@@ -216,15 +216,16 @@ if __name__ == "__main__":
     print("-> Create mask")
     createMaskDeepRes(inMap, inPdb, sampling, size, workpath)
 
-    print("-> Resize map")
-    resize_map(inMap, resolution, sampling, workpath)
-    mask = "mask.vol"
 
     print("--> Resize mask")
+    mask = "mask.vol"
     resize_map(mask, resolution, sampling, workpath)
 
     print("-> Transform mask threshold")
     transform_thr(mask, workpath)
+    
+    print("-> Resize map")
+    resize_map(inMap, resolution, sampling, workpath)
 
     print("-> Execute deepRes")
     execute_deepRes(inMap, resolution, workpath)
