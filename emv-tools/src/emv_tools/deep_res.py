@@ -167,24 +167,31 @@ def run(args):
 
     # Create DeepRes mask
     deepres_mask = create_deepres_mask(pdb_file, emdb_map, metadata)
+    # deepres_mask = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000415_XmippProtCreateMask3D/mask.mrc"
     deepres_mask = resize_output_volume(
         deepres_mask,
         metadata.resolution,
         metadata.size
     )
 
+
     # Resize the DeepRes volume
-    volume_resized = resize_output_volume(
+    deepres_vol = resize_output_volume(
         deepres_vol,
         metadata.resolution,
         metadata.size
     )
 
+    # import shutil
+    # shutil.copy(pdb_file.path, "../data/pdb_file.pdb")
+    # shutil.copy(deepres_vol.path, "../data/deepres_volume.vol")
+    # shutil.copy(deepres_mask.path, "../data/deepres_mask.vol")
+
     # Join the two parts
     deepres_atomic_model = xmipp_pdb_label_from_volume(
         OutputInfo(file_ext="atom.pdb"),
         pdb=pdb_file,
-        volume=volume_resized,
+        volume=deepres_vol,
         mask=deepres_mask,
         sampling=metadata.sampling,
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),

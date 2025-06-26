@@ -1,5 +1,7 @@
 import json
 import datetime
+import itertools
+import statistics
 
 from .proxy import proxify
 from .validate_pdb import _validate_atom_line
@@ -33,9 +35,22 @@ def save_for_bws(input_path, output_path, *, volume_map, atomic_model):
             
         chains = []
         for name, values in chains_dict.items():
+            sequence = [{"resSeqName": v.res_seq_name, "resSeqNumber": v.res_seq_number, "scoreValue": v.value} for v in values]
+            
+            grouped_seq = []
+            for _, g in itertools.groupby(sequence, key=lambda x: x["resSeqNumber"]):
+                g = list(g)
+                avg = statistics.median([e["scoreValue"] for e in g])
+                grouped_seq.append({
+                    "resSeqName": g[0]["resSeqName"],
+                    "resSeqNumber": g[0]["resSeqNumber"],
+                    "scoreValue": avg,
+
+                })
+
             chain = {
                 "name": name,
-                "seqData": [{"resSeqName": v.res_seq_name, "resSeqNumber": v.res_seq_number, "scoreValue": v.value} for v in values]
+                "seqData": grouped_seq
             }
 
             chains.append(chain)
@@ -54,14 +69,3 @@ def save_for_bws(input_path, output_path, *, volume_map, atomic_model):
         with open(output_path, "w") as f:
             json.dump(outputs, f)
         
-
-def main():
-    
-    
-    extract_chains(
-        "/home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/output.atom.pdb"
-    )    
-
-
-if __name__ == "__main__":
-    main()
