@@ -1,19 +1,20 @@
-import os
 
-import numpy as np
+import re
+import pathlib
 import xmippLib
+import logging
+import argparse
+
 from .ffi.scipion import *
-from .utils.proxy import Proxy, TempFileProxy, OutputInfo
+from .utils.proxy import TempFileProxy, OutputInfo
 from .utils.conversion import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
 from .utils.bws import save_for_bws
 
-from functools import partial
-from copy import copy
-from typing import List
-import tempfile
+from collections import namedtuple
+from emv_tools.download import EMDBMetadata, download_emdb_metadata
 
-from emv_tools.download import EMDBMetadata, download_emdb_map, download_emdb_metadata, download_pdb_model
+InputFiles = namedtuple("InputFile", ["emdb_map", "deepres_vol", "structure"])
 
 
 @proxify
@@ -76,15 +77,81 @@ def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
     return mask
 
 
+def find_files(*, scipion_project_root):
+    scipion_project_root = pathlib.Path(scipion_project_root)
+
+    def _glob_re(pattern, strings):
+        pattern = re.compile(pattern)
+        return filter(lambda x: pattern.match(str(x)), strings)
+
+    def _find_file(directory, *, suffix, label, pattern=".*"):
+        cands = list(_glob_re(pattern, directory.glob(f"*.{suffix}")))
+        if len(cands) > 1:
+            cands_str = "\n".join(map(str, cands))
+            logging.warning(f"More than one candidate found for {label}, the behavior is undefined:\n{cands_str}")
+        elif len(cands) == 0:
+            raise ValueError(f"No results for {label} in scipion project")
+
+        return cands[0]
+
+
+    # EMDB map
+    emdb_map = _find_file(
+        scipion_project_root / "Runs" / "000002_ProtImportVolumes" / "extra",
+        suffix="map",
+        pattern="(.*)emd_([0-9]+).map",
+        label="map file"
+    )
+
+    deepres_vol = _find_file(
+        scipion_project_root / "Runs" / "000727_XmippProtDeepRes" / "extra",
+        suffix="vol",
+        pattern="(.*)deepRes_resolution_originalSize.vol",
+        label="DeepRes volume"
+    )
+
+    structure = _find_file(
+        scipion_project_root,
+        suffix="cif",
+        label="CIF file"
+    )
+
+    return InputFiles(str(emdb_map), str(deepres_vol), str(structure))
+
 def main():
 
-    os.makedirs("../data/input_data", exist_ok=True)
+    parser = argparse.ArgumentParser("Convert validation data created on the validation report service (VRS) to a format compatible with 3DBionotes.")
+    _setup_parser_args(parser)
 
-    # Download EMDB Info
-    embd_map = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000002_ProtImportVolumes/extra/emd_41510.map"
-    deepres_vol = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000727_XmippProtDeepRes/extra/deepRes_resolution_originalSize.vol"
-    cif_path = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/8tqo.cif"
-    
+    args = parser.parse_args()
+    run(args)
+
+
+def _setup_parser_args(parser):
+    parser.add_argument("--project", "-p", help="Path to the root folder of the Scipion project to convert", required=False)
+    parser.add_argument("--output", "-o", help="Path to write the converted .json file", required=True)
+
+    parser.add_argument("--map", "-m", help="EMDB .map file")
+    parser.add_argument("--volume", "-v", help="Volume file produced by DeepRes")
+    parser.add_argument("--structure", "-s", help="Aligned atomic model as a CIF file")
+
+
+def _default(default, override):
+    return override if override is not None else default
+
+
+def run(args):
+    if args.project is None:
+        input_files = InputFiles(None, None, None)
+    else:
+        input_files = find_files(scipion_project_root=args.project)
+
+    emdb_map = _default(input_files.emdb_map, args.map)
+    deepres_vol = _default(input_files.deepres_vol, args.volume)
+    cif_path = _default(input_files.structure, args.structure)
+
+    output_path = pathlib.Path(args.output) / "deepres_converted.json"
+
     metadata = download_emdb_metadata(41510) # Get from header instead
 
     pdb_file = load_cif_as_pdb(cif_path)
@@ -93,7 +160,7 @@ def main():
     pdb_file = TempFileProxy.proxy_for_lines(pdb_file, file_ext="pdb")
 
     # Create DeepRes mask
-    deepres_mask = create_deepres_mask(pdb_file, embd_map, metadata)
+    deepres_mask = create_deepres_mask(pdb_file, emdb_map, metadata)
     deepres_mask = resize_output_volume(
         deepres_mask,
         metadata.resolution,
@@ -109,7 +176,7 @@ def main():
 
     # Join the two parts
     deepres_atomic_model = xmipp_pdb_label_from_volume(
-        OutputInfo(file_ext="atom.pdb"), # os.path.abspath("../data/output.atom.pdb"), 
+        OutputInfo(file_ext="atom.pdb"),
         pdb=pdb_file,
         volume=volume_resized,
         mask=deepres_mask,
@@ -119,9 +186,9 @@ def main():
 
     save_for_bws(
         deepres_atomic_model,
-        "../data/EMB-41510_converted.json",
-        volume_map="EMD-41510",
-        atomic_model="8tqo"
+        output_path,
+        volume_map="",
+        atomic_model=""
     )
 
 
