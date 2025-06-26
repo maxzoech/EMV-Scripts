@@ -118,14 +118,6 @@ def find_files(*, scipion_project_root):
 
     return InputFiles(str(emdb_map), str(deepres_vol), str(structure))
 
-def main():
-
-    parser = argparse.ArgumentParser("Convert validation data created on the validation report service (VRS) to a format compatible with 3DBionotes.")
-    _setup_parser_args(parser)
-
-    args = parser.parse_args()
-    run(args)
-
 
 def _setup_parser_args(parser):
     parser.add_argument("--project", "-p", help="Path to the root folder of the Scipion project to convert", required=False)
@@ -141,10 +133,10 @@ def _default(default, override):
 
 
 def run(args):
-    if args.project is None:
-        input_files = InputFiles(None, None, None)
-    else:
-        input_files = find_files(scipion_project_root=args.project)
+    input_files = (
+        find_files(scipion_project_root=args.project) if args.project is not None
+        else InputFiles(None, None, None)
+    )
 
     emdb_map = _default(input_files.emdb_map, args.map)
     deepres_vol = _default(input_files.deepres_vol, args.volume)
@@ -152,6 +144,20 @@ def run(args):
 
     output_path = pathlib.Path(args.output) / "deepres_converted.json"
 
+    if emdb_map is None:
+        logging.error("No file provided for EMDB map")
+        exit(-1)
+
+    if deepres_vol is None:
+        logging.error("No file provided for DeepRes volume")
+        exit(-1)
+
+    if cif_path is None:
+        logging.error("No file provided for atomic model")
+        exit(-1)
+
+
+    # Load files
     metadata = download_emdb_metadata(41510) # Get from header instead
 
     pdb_file = load_cif_as_pdb(cif_path)
@@ -191,6 +197,14 @@ def run(args):
         atomic_model=""
     )
 
+
+def main():
+
+    parser = argparse.ArgumentParser("Convert validation data created on the validation report service (VRS) to a format compatible with 3DBionotes.")
+    _setup_parser_args(parser)
+
+    args = parser.parse_args()
+    run(args)
 
 if __name__ == "__main__":
     main()
