@@ -63,7 +63,7 @@ def postprocess_volume_align_args(raw_args):
     },
     postprocess_fn=postprocess_volume_align_args
 )
-def xmipp_volume_align(outputs: str, *, embdb_map: str, volume: str, local="--apply"):
+def xmipp_volume_align(outputs: str, *, embdb_map: str, volume: str, local: bool, apply: bool):
     pass
 
 

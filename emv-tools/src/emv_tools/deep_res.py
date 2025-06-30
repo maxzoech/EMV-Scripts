@@ -1,4 +1,3 @@
-
 import re
 import pathlib
 import xmippLib
@@ -32,46 +31,36 @@ def resize_output_volume(output_volume, resolution: int, size: int):
     fourier_v = resize_samp / 2 * final_samp
 
     output = xmipp_transform_filter(
-        output_volume,
-        OutputInfo("vol"),
-        fourier="low_pass %f" % fourier_v
+        output_volume, OutputInfo("vol"), fourier="low_pass %f" % fourier_v
     )
 
-    return xmipp_image_resize(
-        output,
-        OutputInfo("vol"),
-        dim=size
-    )
+    return xmipp_image_resize(output, OutputInfo("vol"), dim=size)
 
 
 def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
-    
+
     volume_pdb = xmipp_volume_from_pdb(
         pdb_file,
         OutputInfo(None),
         center_pdb="-v 0",
         sampling=metadata.sampling,
-        size=metadata.size
+        size=metadata.size,
     ).reassign("vol")
 
     aligned = xmipp_volume_align(
         OutputInfo(file_ext="vol"),
         embdb_map=emdb_map,
-        volume=volume_pdb
+        volume=volume_pdb,
+        local=True,
+        apply=True,
     )
 
     mask = xmipp_transform_threshold(
-        aligned,
-        OutputInfo(file_ext="vol"),
-        select="below 0.02",
-        substitute="binarize"
+        aligned, OutputInfo(file_ext="vol"), select="below 0.02", substitute="binarize"
     )
 
     mask = xmipp_transform_morphology(
-        mask,
-        OutputInfo("vol"),
-        binary_operation="dilation",
-        size=2
+        mask, OutputInfo("vol"), binary_operation="dilation", size=2
     )
 
     return mask
@@ -88,40 +77,44 @@ def find_files(*, scipion_project_root):
         cands = list(_glob_re(pattern, directory.glob(f"*.{suffix}")))
         if len(cands) > 1:
             cands_str = "\n".join(map(str, cands))
-            logging.warning(f"More than one candidate found for {label}, the behavior is undefined:\n{cands_str}")
+            logging.warning(
+                f"More than one candidate found for {label}, the behavior is undefined:\n{cands_str}"
+            )
         elif len(cands) == 0:
             raise ValueError(f"No results for {label} in scipion project")
 
         return cands[0]
-
 
     # EMDB map
     emdb_map = _find_file(
         scipion_project_root / "Runs" / "000002_ProtImportVolumes" / "extra",
         suffix="map",
         pattern="(.*)emd_([0-9]+).map",
-        label="map file"
+        label="map file",
     )
 
     deepres_vol = _find_file(
         scipion_project_root / "Runs" / "000727_XmippProtDeepRes" / "extra",
         suffix="vol",
         pattern="(.*)deepRes_resolution_originalSize.vol",
-        label="DeepRes volume"
+        label="DeepRes volume",
     )
 
-    structure = _find_file(
-        scipion_project_root,
-        suffix="cif",
-        label="CIF file"
-    )
+    structure = _find_file(scipion_project_root, suffix="cif", label="CIF file")
 
     return InputFiles(str(emdb_map), str(deepres_vol), str(structure))
 
 
 def _setup_parser_args(parser):
-    parser.add_argument("--project", "-p", help="Path to the root folder of the Scipion project to convert", required=False)
-    parser.add_argument("--output", "-o", help="Path to write the converted .json file", required=True)
+    parser.add_argument(
+        "--project",
+        "-p",
+        help="Path to the root folder of the Scipion project to convert",
+        required=False,
+    )
+    parser.add_argument(
+        "--output", "-o", help="Path to write the converted .json file", required=True
+    )
 
     parser.add_argument("--map", "-m", help="EMDB .map file")
     parser.add_argument("--volume", "-v", help="Volume file produced by DeepRes")
@@ -134,7 +127,8 @@ def _default(default, override):
 
 def run(args):
     input_files = (
-        find_files(scipion_project_root=args.project) if args.project is not None
+        find_files(scipion_project_root=args.project)
+        if args.project is not None
         else InputFiles(None, None, None)
     )
 
@@ -156,9 +150,8 @@ def run(args):
         logging.error("No file provided for atomic model")
         exit(-1)
 
-
     # Load files
-    metadata = download_emdb_metadata(41510) # Get from header instead
+    metadata = download_emdb_metadata(41510)  # Get from header instead
 
     pdb_file = load_cif_as_pdb(cif_path)
     validate_pdb_lines(pdb_file)
@@ -173,7 +166,6 @@ def run(args):
     #     metadata.resolution,
     #     metadata.size
     # )
-
 
     # # Resize the DeepRes volume
     # deepres_vol = resize_output_volume(
@@ -207,11 +199,14 @@ def run(args):
 
 def main():
 
-    parser = argparse.ArgumentParser("Convert validation data created on the validation report service (VRS) to a format compatible with 3DBionotes.")
+    parser = argparse.ArgumentParser(
+        "Convert validation data created on the validation report service (VRS) to a format compatible with 3DBionotes."
+    )
     _setup_parser_args(parser)
 
     args = parser.parse_args()
     run(args)
+
 
 if __name__ == "__main__":
     main()

@@ -5,7 +5,7 @@ from subprocess import Popen, PIPE
 
 import ast
 import inspect
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, Set
 
 import itertools
 import functools
@@ -42,15 +42,22 @@ def _func_is_empty(func):
     return False  # In case no FunctionDef was found
 
 
-def _param_to_cmd_args(param: inspect.Parameter, args_map):
+def _param_to_cmd_args(
+    param: inspect.Parameter, value: Any, args_map, boolean_params: Set[str]
+):
 
     k = param.name
     param = param.replace(name=args_map[k]) if k in args_map else param
 
-    is_keyword = param.kind == inspect.Parameter.KEYWORD_ONLY
-    prefix = "--" if is_keyword else "-"
+    if param.name in boolean_params:
+        return (
+            [f"--{param.name}"] if value else []
+        )  # Use `if value` to support implicit booleaness of Python
+    else:
+        is_keyword = param.kind == inspect.Parameter.KEYWORD_ONLY
+        prefix = "--" if is_keyword else "-"
 
-    return prefix + param.name
+        return [prefix + param.name, str(value)]
 
 
 def foreign_function(
@@ -62,6 +69,17 @@ def foreign_function(
             f"Forward declared external scipion function {f.__name__} must be only contain a single pass statement."
         )
 
+    params = inspect.signature(f).parameters
+    boolean_params = {k for k, v in f.__annotations__.items() if v is bool}
+    pos_args = {
+        k
+        for k, v in params.items()
+        if v.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+    }
+
+    if boolean_params.intersection(pos_args):
+        raise RuntimeError("Positional arguments cannot be declared as boolean flags")
+
     run_args.setdefault("shell", True)
     # run_args["stdout"]=PIPE
     run_args["stderr"] = PIPE
@@ -71,7 +89,6 @@ def foreign_function(
     if args_validation is None:
         args_validation = {}
 
-    params = inspect.signature(f).parameters
     args_validation = {k: re.compile(v) for k, v in args_validation.items()}
 
     @functools.wraps(f)
@@ -98,14 +115,16 @@ def foreign_function(
                 )
 
         raw_args = [
-            [_param_to_cmd_args(p, args_map), str(v)] for p, v in merged_args.items()
+            _param_to_cmd_args(p, v, args_map, boolean_params)
+            for p, v in merged_args.items()
         ]
         if postprocess_fn is not None:
             raw_args = postprocess_fn(raw_args)
 
         raw_args = itertools.chain.from_iterable(raw_args)
-
         raw_args = ["scipion", "run", f.__name__, *raw_args]
+
+        print(" ".join(raw_args))
 
         cmd = " ".join(raw_args)
         proc = Popen(cmd, **run_args)
