@@ -1,6 +1,6 @@
 from functools import partial
-from emv_tools.utils.external_call import foreign_function
-from emv_tools.utils.proxy import proxify
+from ..scipion_bridge.external_call import foreign_function
+from ..scipion_bridge.proxy import proxify
 
 @proxify
 @partial(

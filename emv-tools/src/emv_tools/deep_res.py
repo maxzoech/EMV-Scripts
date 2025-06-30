@@ -6,7 +6,7 @@ import logging
 import argparse
 
 from .ffi.scipion import *
-from .utils.proxy import TempFileProxy, OutputInfo
+from .scipion_bridge.proxy import TempFileProxy, OutputInfo
 from .utils.conversion import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
 from .utils.bws import save_for_bws
@@ -168,19 +168,19 @@ def run(args):
     # Create DeepRes mask
     deepres_mask = create_deepres_mask(pdb_file, emdb_map, metadata)
     # deepres_mask = "/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000415_XmippProtCreateMask3D/mask.mrc"
-    deepres_mask = resize_output_volume(
-        deepres_mask,
-        metadata.resolution,
-        metadata.size
-    )
+    # deepres_mask = resize_output_volume(
+    #     deepres_mask,
+    #     metadata.resolution,
+    #     metadata.size
+    # )
 
 
-    # Resize the DeepRes volume
-    deepres_vol = resize_output_volume(
-        deepres_vol,
-        metadata.resolution,
-        metadata.size
-    )
+    # # Resize the DeepRes volume
+    # deepres_vol = resize_output_volume(
+    #     deepres_vol,
+    #     metadata.resolution,
+    #     metadata.size
+    # )
 
     # import shutil
     # shutil.copy(pdb_file.path, "../data/pdb_file.pdb")

@@ -1,0 +1,121 @@
+import os
+import sys
+import re
+from subprocess import Popen, PIPE
+
+import ast
+import inspect
+from typing import Dict, Any, Callable
+
+import itertools
+import functools
+from functools import partial
+
+from ..utils.func_params import extract_func_params
+
+
+class ScipionError(Exception):
+
+    def __init__(self, returncode: int, message: str, func_name: str):
+        super().__init__()
+
+        self.returncode = returncode
+        self.message = message
+        self.func_name = func_name
+
+    def __str__(self):
+        return f"{self.message}\nExternal call to {self.func_name} failed with exit code {self.returncode}"
+
+
+def _func_is_empty(func):
+
+    source = inspect.getsource(func)
+    tree = ast.parse(source)
+
+    # Find the function definition in the AST
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            body = node.body
+
+            return len(body) == 1 and isinstance(body[0], ast.Pass)
+
+    return False  # In case no FunctionDef was found
+
+
+def _param_to_cmd_args(param: inspect.Parameter, args_map):
+
+    k = param.name
+    param = param.replace(name=args_map[k]) if k in args_map else param
+
+    is_keyword = param.kind == inspect.Parameter.KEYWORD_ONLY
+    prefix = "--" if is_keyword else "-"
+
+    return prefix + param.name
+
+
+def foreign_function(
+    f, args_map=None, args_validation=None, postprocess_fn=None, **run_args
+):
+    is_empty = _func_is_empty(f)
+    if not is_empty:
+        raise RuntimeError(
+            f"Forward declared external scipion function {f.__name__} must be only contain a single pass statement."
+        )
+
+    run_args.setdefault("shell", True)
+    # run_args["stdout"]=PIPE
+    run_args["stderr"] = PIPE
+
+    if args_map is None:
+        args_map = {}
+    if args_validation is None:
+        args_validation = {}
+
+    params = inspect.signature(f).parameters
+    args_validation = {k: re.compile(v) for k, v in args_validation.items()}
+
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        _ = f(
+            *args, **kwargs
+        )  # Call function for Python to throw error if args and kwargs aren't passed correctly
+
+        merged_args = extract_func_params(args, kwargs, params)
+
+        # Filter args that are None to support optional arguments
+        merged_args = {k: v for k, v in merged_args.items() if v is not None}
+
+        # Validate inputs before calling external program
+        # arg_names = {k.name for k in merged_args}
+        for arg, value in merged_args.items():
+            if not arg.name in args_validation:
+                continue
+
+            pattern = args_validation[arg.name]
+            if not re.fullmatch(pattern, value):
+                raise ValueError(
+                    f"Value '{value}' for does not have the required format for '{arg.name}'"
+                )
+
+        raw_args = [
+            [_param_to_cmd_args(p, args_map), str(v)] for p, v in merged_args.items()
+        ]
+        if postprocess_fn is not None:
+            raw_args = postprocess_fn(raw_args)
+
+        raw_args = itertools.chain.from_iterable(raw_args)
+
+        raw_args = ["scipion", "run", f.__name__, *raw_args]
+
+        cmd = " ".join(raw_args)
+        proc = Popen(cmd, **run_args)
+        _, err = proc.communicate()  # Blocks until finished
+        if proc.returncode != 0:
+            raise ScipionError(proc.returncode, err.decode("utf-8"), f.__name__)
+
+        return proc.returncode
+
+    return wrapper
+
+
+__all__ = [foreign_function]
