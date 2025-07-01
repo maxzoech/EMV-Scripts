@@ -37,4 +37,4 @@ jobs:
         run: |
           cd emv-tools
           poetry lock && poetry install --with test
-          pytest tests
+          python -m pytest tests
