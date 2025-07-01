@@ -2,6 +2,11 @@ import os
 import sys
 import re
 from subprocess import Popen, PIPE
+from dependency_injector import containers, providers
+from dependency_injector.wiring import Provide, inject
+
+from ..utils.providers.container import Container
+from ..utils.providers.cmd_exec import ShellExecProvider
 
 import ast
 import inspect
@@ -12,19 +17,6 @@ import functools
 from functools import partial
 
 from ..utils.func_params import extract_func_params
-
-
-class ScipionError(Exception):
-
-    def __init__(self, returncode: int, message: str, func_name: str):
-        super().__init__()
-
-        self.returncode = returncode
-        self.message = message
-        self.func_name = func_name
-
-    def __str__(self):
-        return f"{self.message}\nExternal call to {self.func_name} failed with exit code {self.returncode}"
 
 
 def _func_is_empty(func):
@@ -60,9 +52,11 @@ def _param_to_cmd_args(
         return [prefix + param.name, str(value)]
 
 
+@inject
 def foreign_function(
-    f, args_map=None, args_validation=None, postprocess_fn=None, **run_args
+    f, args_map=None, args_validation=None, postprocess_fn=None, runner: ShellExecProvider=Provide[Container.shell_exec], **run_args
 ):
+
     is_empty = _func_is_empty(f)
     if not is_empty:
         raise RuntimeError(
@@ -124,15 +118,7 @@ def foreign_function(
         raw_args = itertools.chain.from_iterable(raw_args)
         raw_args = ["scipion", "run", f.__name__, *raw_args]
 
-        print(" ".join(raw_args))
-
-        cmd = " ".join(raw_args)
-        proc = Popen(cmd, **run_args)
-        _, err = proc.communicate()  # Blocks until finished
-        if proc.returncode != 0:
-            raise ScipionError(proc.returncode, err.decode("utf-8"), f.__name__)
-
-        return proc.returncode
+        return runner.run(f.__name__, raw_args, run_args)
 
     return wrapper
 

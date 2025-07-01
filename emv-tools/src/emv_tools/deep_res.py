@@ -9,6 +9,7 @@ from .scipion_bridge.proxy import TempFileProxy, OutputInfo
 from .utils.conversion import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
 from .utils.bws import save_for_bws
+from .utils.providers.container import Container
 
 from collections import namedtuple
 from emv_tools.download import EMDBMetadata, download_emdb_metadata
@@ -209,4 +210,8 @@ def main():
 
 
 if __name__ == "__main__":
+
+    container = Container()
+    container.wire(modules=[__name__])
+
     main()
