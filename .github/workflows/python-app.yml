@@ -23,8 +23,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 poetry pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install flake8 poetry
+          poetry config virtualenvs.create false
       - name: Lint with flake8
         run: |
           # Do everything in the EMV-directory and ignore the legacy code and install
