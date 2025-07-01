@@ -1,3 +1,9 @@
+# EMV Tools
+[![Testing](https://github.com/maxzoech/EMV-Scripts/actions/workflows/python-app.yml/badge.svg)](https://github.com/maxzoech/EMV-Scripts/actions/workflows/python-app.yml)
+
+
+
+=== Original README below ===
 EMV-Scripts
 
 Version 0.3.0
