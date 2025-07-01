@@ -2,18 +2,13 @@
 name = "emv-tools"
 version = "0.1.0"
 description = "A Python tool to convert validation data on VRS to a format compatible with 3DBionotes"
-authors = [
-    {name = "Max Zoech",email = "maximilian.zoech@cnb.csic.es"}
-]
+authors = [{ name = "Max Zoech", email = "maximilian.zoech@cnb.csic.es" }]
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = [
-    dependency-injector = "^4.48.1",
-    
-]
+dependencies = ["dependency-injector (^4.48.1)"]
 
 [tool.poetry]
-packages = [{include = "emv_tools", from = "src"}]
+packages = [{ include = "emv_tools", from = "src" }]
 
 
 [build-system]
