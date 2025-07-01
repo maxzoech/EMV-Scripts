@@ -25,6 +25,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8 poetry
           poetry config virtualenvs.create false
+      - name: Install package
+        run: |
+          poetry lock && poetry install --with test
       - name: Lint with flake8
         run: |
           # Do everything in the EMV-directory and ignore the legacy code and install
@@ -36,5 +39,4 @@ jobs:
       - name: Test with pytest
         run: |
           cd emv-tools
-          poetry lock && poetry install --with test
           python -m pytest --cov=emv_tools tests
