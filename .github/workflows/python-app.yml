@@ -36,5 +36,5 @@ jobs:
       - name: Test with pytest
         run: |
           cd emv-tools
-          poetry install --with tests
+          poetry install --with test
           pytest tests
