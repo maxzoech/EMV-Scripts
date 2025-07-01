@@ -27,6 +27,7 @@ jobs:
           poetry config virtualenvs.create false
       - name: Install package
         run: |
+          cd emv-tools
           poetry lock && poetry install --with test
       - name: Lint with flake8
         run: |
