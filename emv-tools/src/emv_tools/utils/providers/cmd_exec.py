@@ -16,10 +16,6 @@ class ShellExecProvider:
             raise RuntimeError(error_msg)
 
         return proc.returncode
-    
 
-
-class MockExecProvider:
-    def run(self, func_name, args: List[str], run_args):
-        print("Don't do anything")
-        pass
+    def __call__(self, *args, **kwds):
+        self.run(*args, **kwds)

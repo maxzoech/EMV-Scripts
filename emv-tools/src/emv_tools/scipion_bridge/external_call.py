@@ -118,7 +118,7 @@ def foreign_function(
         raw_args = itertools.chain.from_iterable(raw_args)
         raw_args = ["scipion", "run", f.__name__, *raw_args]
 
-        return __scipion_bridge_runner__.run(f.__name__, raw_args, run_args)
+        return __scipion_bridge_runner__(f.__name__, raw_args, run_args)
 
     return wrapper
 

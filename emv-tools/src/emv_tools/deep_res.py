@@ -190,12 +190,7 @@ def run(args):
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )
 
-    save_for_bws(
-        deepres_atomic_model,
-        output_path,
-        volume_map="",
-        atomic_model=""
-    )
+    save_for_bws(deepres_atomic_model, output_path, volume_map="", atomic_model="")
 
 
 def main():
@@ -210,7 +205,7 @@ def main():
 
 
 from dependency_injector import containers, providers
-from .utils.providers.cmd_exec import ShellExecProvider, MockExecProvider
+from .utils.providers.cmd_exec import ShellExecProvider
 from .utils.providers.container import Container
 
 
@@ -219,3 +214,4 @@ if __name__ == "__main__":
     container = Container()
     container.wire(modules=[__name__, ".ffi.scipion"])
 
+    main()
