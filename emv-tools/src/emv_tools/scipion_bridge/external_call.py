@@ -52,9 +52,8 @@ def _param_to_cmd_args(
         return [prefix + param.name, str(value)]
 
 
-@inject
 def foreign_function(
-    f, args_map=None, args_validation=None, postprocess_fn=None, runner: ShellExecProvider=Provide[Container.shell_exec], **run_args
+    f, args_map=None, args_validation=None, postprocess_fn=None, **run_args
 ):
 
     is_empty = _func_is_empty(f)
@@ -86,7 +85,8 @@ def foreign_function(
     args_validation = {k: re.compile(v) for k, v in args_validation.items()}
 
     @functools.wraps(f)
-    def wrapper(*args, **kwargs):
+    @inject
+    def wrapper(*args, __scipion_bridge_runner__: ShellExecProvider=Provide[Container.shell_exec], **kwargs):
         _ = f(
             *args, **kwargs
         )  # Call function for Python to throw error if args and kwargs aren't passed correctly
@@ -118,7 +118,7 @@ def foreign_function(
         raw_args = itertools.chain.from_iterable(raw_args)
         raw_args = ["scipion", "run", f.__name__, *raw_args]
 
-        return runner.run(f.__name__, raw_args, run_args)
+        return __scipion_bridge_runner__.run(f.__name__, raw_args, run_args)
 
     return wrapper
 

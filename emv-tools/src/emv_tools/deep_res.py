@@ -209,9 +209,13 @@ def main():
     run(args)
 
 
+from dependency_injector import containers, providers
+from .utils.providers.cmd_exec import ShellExecProvider, MockExecProvider
+from .utils.providers.container import Container
+
+
 if __name__ == "__main__":
 
     container = Container()
-    container.wire(modules=[__name__])
+    container.wire(modules=[__name__, ".ffi.scipion"])
 
-    main()

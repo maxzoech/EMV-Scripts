@@ -1,4 +1,4 @@
-from ..utils.providers.container import Container
+# from ..utils.providers.container import Container
 
-container = Container()
-container.wire(modules=[".external_call"])
+# container = Container()
+# container.wire(modules=[".external_call"])
