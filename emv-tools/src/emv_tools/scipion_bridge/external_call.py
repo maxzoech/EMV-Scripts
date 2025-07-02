@@ -10,6 +10,7 @@ from ..utils.providers.cmd_exec import ShellExecProvider
 
 import ast
 import inspect
+import autopep8
 from typing import Dict, Any, Callable, Set
 
 import itertools
@@ -22,6 +23,8 @@ from ..utils.func_params import extract_func_params
 def _func_is_empty(func):
 
     source = inspect.getsource(func)
+    source = autopep8.fix_code(source)
+
     tree = ast.parse(source)
 
     # Find the function definition in the AST

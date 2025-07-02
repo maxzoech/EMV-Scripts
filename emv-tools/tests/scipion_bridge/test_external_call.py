@@ -112,5 +112,30 @@ def test_boolean_function(mocker: MockerFixture, flag: bool, flag_name: str):
         )
 
 
+def xmipp_invalid_func():
+    print("Hello world!")
+
+
+def test_non_empty_function():
+    with pytest.raises(RuntimeError):
+        foreign_function(xmipp_invalid_func)
+
+    with pytest.raises(RuntimeError):
+        foreign_function(
+            lambda x: x + 2
+        )  # Just pass an expression which is not allowed
+
+
+def test_inner_func_definition():
+    try:
+
+        @partial(foreign_function)
+        def xmipp_to_something_with_mapping():
+            pass
+
+    except IndentationError:
+        assert False, "Nested function raised indentation error"
+
+
 if __name__ == "__main__":
     test_basic_foreign_function()
