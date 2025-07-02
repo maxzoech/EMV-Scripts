@@ -79,12 +79,15 @@ def xmipp_boolean(inputs: str, *, boolean_flag: bool) -> int:
 
 
 @pytest.mark.parametrize(
-    "flag,flag_name", itertools.product([True, False], ["flag", "boolean_flag"])
+    "flag,rename_flag", itertools.product([True, False], [True, False])
 )
-def test_boolean_function(mocker: MockerFixture, flag: bool, flag_name: str):
-    _xmipp_boolean = foreign_function(
-        xmipp_boolean, args_map={"inputs": "i", "boolean_flag": flag_name}
+def test_boolean_function(mocker: MockerFixture, flag: bool, rename_flag: bool):
+    flag_name = "renamed" if rename_flag else "boolean_flag"
+    args_map = (
+        {"inputs": "i", "boolean_flag": flag_name} if rename_flag else {"inputs": "i"}
     )
+
+    _xmipp_boolean = foreign_function(xmipp_boolean, args_map=args_map)
 
     container = Container()
     container.wire(modules=[__name__])
