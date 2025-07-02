@@ -82,8 +82,6 @@ def xmipp_boolean(inputs: str, *, boolean_flag: bool) -> int:
     "flag,flag_name", itertools.product([True, False], ["flag", "boolean_flag"])
 )
 def test_boolean_function(mocker: MockerFixture, flag: bool, flag_name: str):
-    print(flag_name)
-
     _xmipp_boolean = foreign_function(
         xmipp_boolean, args_map={"inputs": "i", "boolean_flag": flag_name}
     )
@@ -178,6 +176,33 @@ def test_argument_validation(mocker: MockerFixture):  # , arg_name):
 
         with pytest.raises(ValueError):
             xmipp_function_with_validation("/some/path/to/file.invalid")
+
+
+@partial(foreign_function, postprocess_fn=lambda x: [[x[0][1]]] + x[1:])
+def xmipp_func_custom_postprocessing(argument: str, *, flag: bool):
+    pass
+
+
+def test_custom_postprocessing(mocker: MockerFixture):
+    container = Container()
+    container.wire(modules=[__name__])
+
+    exec_mock = mocker.Mock()
+
+    with container.shell_exec.override(exec_mock):
+        xmipp_func_custom_postprocessing("/some/path/to/file.vol", flag=True)
+
+        exec_mock.assert_called_with(
+            "xmipp_func_custom_postprocessing",
+            [
+                "scipion",
+                "run",
+                "xmipp_func_custom_postprocessing",
+                "/some/path/to/file.vol",
+                "--flag",
+            ],
+            {"shell": True, "stderr": -1},
+        )
 
 
 if __name__ == "__main__":

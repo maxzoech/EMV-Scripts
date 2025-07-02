@@ -43,7 +43,7 @@ def _param_to_cmd_args(
 
     k = param.name
     param = param.replace(name=args_map[k]) if k in args_map else param
-    boolean_params = {args_map[p] for p in boolean_params if p in args_map}
+    boolean_params = {args_map[p] if p in args_map else p for p in boolean_params}
 
     if param.name in boolean_params:
         return (
