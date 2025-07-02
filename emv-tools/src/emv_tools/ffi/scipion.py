@@ -22,7 +22,7 @@ def xmipp_transform_filter(inputs: str, outputs: str, *, fourier: str) -> int:
     args_map={"inputs": "i", "outputs": "o"},
     args_validation={
         "outputs": "(.+)\.vol",
-        # "inputs": "(.+)\.vol"
+        "inputs": "(.+)\.vol"
     }
 )
 def xmipp_image_resize(inputs: str, outputs: str, *, factor=None, dim=None) -> int:

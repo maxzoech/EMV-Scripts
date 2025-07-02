@@ -59,6 +59,18 @@ def _param_to_cmd_args(
 def foreign_function(
     f, args_map=None, args_validation=None, postprocess_fn=None, **run_args
 ):
+    """
+    Use this decorator to expose XMIPP programs to Python.
+
+    XMIPP programs are called in the command line using scipion, for example
+    `scipion run xmipp_xmipp_volume_from_pdb -i ... -o ...`. The
+    `foreign_function` decorator sets up wiring to transform a Python function
+    call into command line arguments.
+
+    When exposing an XMIPP program you can rename input arguments to make the
+    function more Pythonic and add input validation. See Exposing XMIPP Programs
+    for more details.
+    """
 
     is_empty = _func_is_empty(f)
     if not is_empty:
