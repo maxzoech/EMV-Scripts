@@ -1,6 +1,10 @@
+import itertools
+from functools import partial
+
 from emv_tools.scipion_bridge.external_call import foreign_function
 
 from emv_tools.utils.providers.container import Container
+import pytest
 from pytest_mock import MockerFixture
 
 
@@ -32,6 +36,78 @@ def test_basic_foreign_function(mocker: MockerFixture):
                 "--keyword_param",
                 "42",
             ],
+            {"shell": True, "stderr": -1},
+        )
+
+
+@partial(foreign_function, args_map={"inputs": "i", "outputs": "o"})
+def xmipp_to_something_with_mapping(
+    inputs: str, outputs: str, *, keyword_param: int
+) -> int:
+    pass
+
+
+def test_basic_foreign_function_with_mapping(mocker: MockerFixture):
+
+    container = Container()
+    container.wire(modules=[__name__])
+
+    exec_mock = mocker.Mock()
+
+    with container.shell_exec.override(exec_mock):
+        xmipp_to_something_with_mapping("/some/input", "/some/output", keyword_param=42)
+
+        exec_mock.assert_called_with(
+            "xmipp_to_something_with_mapping",
+            [
+                "scipion",
+                "run",
+                "xmipp_to_something_with_mapping",
+                "-i",
+                "/some/input",
+                "-o",
+                "/some/output",
+                "--keyword_param",
+                "42",
+            ],
+            {"shell": True, "stderr": -1},
+        )
+
+
+def xmipp_boolean(inputs: str, *, boolean_flag: bool) -> int:
+    pass
+
+
+@pytest.mark.parametrize(
+    "flag,flag_name", itertools.product([True, False], ["flag", "boolean_flag"])
+)
+def test_boolean_function(mocker: MockerFixture, flag: bool, flag_name: str):
+    print(flag_name)
+
+    _xmipp_boolean = foreign_function(
+        xmipp_boolean, args_map={"inputs": "i", "boolean_flag": flag_name}
+    )
+
+    container = Container()
+    container.wire(modules=[__name__])
+
+    exec_mock = mocker.Mock()
+
+    with container.shell_exec.override(exec_mock):
+        _xmipp_boolean("/some/input", boolean_flag=flag)
+
+        flag_result = [f"--{flag_name}"] if flag else []
+
+        exec_mock.assert_called_with(
+            "xmipp_boolean",
+            [
+                "scipion",
+                "run",
+                "xmipp_boolean",
+                "-i",
+                "/some/input",
+            ]
+            + flag_result,
             {"shell": True, "stderr": -1},
         )
 

@@ -40,6 +40,7 @@ def _param_to_cmd_args(
 
     k = param.name
     param = param.replace(name=args_map[k]) if k in args_map else param
+    boolean_params = {args_map[p] for p in boolean_params if p in args_map}
 
     if param.name in boolean_params:
         return (
@@ -62,8 +63,14 @@ def foreign_function(
             f"Forward declared external scipion function {f.__name__} must be only contain a single pass statement."
         )
 
+    if args_map is None:
+        args_map = {}
+    if args_validation is None:
+        args_validation = {}
+
     params = inspect.signature(f).parameters
     boolean_params = {k for k, v in f.__annotations__.items() if v is bool}
+
     pos_args = {
         k
         for k, v in params.items()
@@ -77,16 +84,15 @@ def foreign_function(
     # run_args["stdout"]=PIPE
     run_args["stderr"] = PIPE
 
-    if args_map is None:
-        args_map = {}
-    if args_validation is None:
-        args_validation = {}
-
     args_validation = {k: re.compile(v) for k, v in args_validation.items()}
 
     @functools.wraps(f)
     @inject
-    def wrapper(*args, __scipion_bridge_runner__: ShellExecProvider=Provide[Container.shell_exec], **kwargs):
+    def wrapper(
+        *args,
+        __scipion_bridge_runner__: ShellExecProvider = Provide[Container.shell_exec],
+        **kwargs,
+    ):
         _ = f(
             *args, **kwargs
         )  # Call function for Python to throw error if args and kwargs aren't passed correctly
