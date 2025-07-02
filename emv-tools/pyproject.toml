@@ -7,7 +7,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "dependency-injector (>=4.48.1,<5.0.0)",
-    "autopep8 (>=2.3.2,<3.0.00",
+    "autopep8 (>=2.3.2,<3.0.0)",
 ]
 
 [tool.poetry]
