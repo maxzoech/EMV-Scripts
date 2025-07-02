@@ -137,5 +137,48 @@ def test_inner_func_definition():
         assert False, "Nested function raised indentation error"
 
 
+def xmipp_invalid_flag_function(some_flag: bool):
+    pass
+
+
+def test_invalid_boolean_args_definition():
+    with pytest.raises(RuntimeError):
+        foreign_function(xmipp_invalid_flag_function)
+
+
+@partial(
+    foreign_function,
+    args_map={"some_argument": "renamed"},
+    args_validation={"some_argument": "(.+)\\.vol"},
+)
+def xmipp_function_with_validation(some_argument: str):
+    pass
+
+
+def test_argument_validation(mocker: MockerFixture):  # , arg_name):
+    container = Container()
+    container.wire(modules=[__name__])
+
+    exec_mock = mocker.Mock()
+
+    with container.shell_exec.override(exec_mock):
+        xmipp_function_with_validation("/some/path/to/file.vol")
+
+        exec_mock.assert_called_with(
+            "xmipp_function_with_validation",
+            [
+                "scipion",
+                "run",
+                "xmipp_function_with_validation",
+                "-renamed",
+                "/some/path/to/file.vol",
+            ],
+            {"shell": True, "stderr": -1},
+        )
+
+        with pytest.raises(ValueError):
+            xmipp_function_with_validation("/some/path/to/file.invalid")
+
+
 if __name__ == "__main__":
     test_basic_foreign_function()
