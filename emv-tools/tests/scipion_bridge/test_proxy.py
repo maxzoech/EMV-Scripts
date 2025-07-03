@@ -2,6 +2,7 @@ import os
 
 from emv_tools.scipion_bridge.proxy import proxify, OutputInfo, TempFileProxy
 from emv_tools.utils.providers.container import Container
+import pytest
 
 
 class TempFileMock:
@@ -80,3 +81,42 @@ def test_proxy_attr():
             str(TempFileProxy("vol"))
             == "<TempFileProxy for /tmp/temp_file_0.vol (owned)>"
         )
+
+
+def test_nested_proxies():
+
+    @proxify
+    def func_1(output_path: str):
+        with open(output_path, "w+") as f:
+            f.write("Write from func 1")
+
+    @proxify
+    def func_2():
+        return func_1(OutputInfo("txt"))
+
+    container = Container()
+    container.wire(modules=[__name__])
+
+    temp_file_mock = TempFileMock()
+    with container.temp_file_provider.override(temp_file_mock):
+        output = func_2()
+        assert output.path == "/tmp/temp_file_0.txt"
+
+        with open(output.path) as f:
+            assert f.read() == "Write from func 1"
+
+
+def test_return_value_warning():
+
+    @proxify
+    def foo(output: str):
+        del output
+        return 42
+
+    container = Container()
+    container.wire(modules=[__name__])
+
+    temp_file_mock = TempFileMock()
+    with container.temp_file_provider.override(temp_file_mock):
+        with pytest.warns(UserWarning):
+            foo(OutputInfo("bar"))

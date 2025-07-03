@@ -4,6 +4,7 @@ import shutil
 import inspect
 import tempfile
 import logging
+import warnings
 
 from functools import wraps
 from typing import Optional, List
@@ -49,7 +50,7 @@ class Proxy:
 
     @property
     def path(self):
-        raise NotImplementedError("Implement in subclass")
+        raise NotImplementedError("Implement in subclass")  # pragma: no cover
 
     @inject
     def __del__(
@@ -255,8 +256,9 @@ def proxify(f, map_inputs=True, map_outputs=True):
             return out_val
 
         if not (out_val == 0 or out_val == None) and map_outputs:
-            logging.warning(
-                f"Wrapped function returns non-zero value; this value {out_val} will be discarded"
+            warnings.warn(
+                f"Wrapped function returns non-zero value; the value '{out_val}' will be discarded",
+                UserWarning,
             )
 
         if len(output_proxies) == 0:
