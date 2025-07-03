@@ -204,10 +204,7 @@ def main():
     run(args)
 
 
-from dependency_injector import containers, providers
-from .utils.providers.cmd_exec import ShellExecProvider
 from .utils.providers.container import Container
-
 
 if __name__ == "__main__":
 

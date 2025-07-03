@@ -12,6 +12,10 @@ from collections import namedtuple
 
 from ..utils.func_params import extract_func_params
 
+from dependency_injector.wiring import Provide, inject
+from ..utils.providers.container import Container
+from ..utils.providers.temp_files import TemporaryFilesProvider
+
 
 class Proxy:
     """
@@ -47,11 +51,16 @@ class Proxy:
     def path(self):
         raise NotImplementedError("Implement in subclass")
 
-    def __del__(self):
+    @inject
+    def __del__(
+        self,
+        temp_file_provider: TemporaryFilesProvider = Provide[
+            Container.temp_file_provider
+        ],
+    ):
         try:
             if self.owned == True:
-                os.remove(self.path)
-                print(f"Removed file at: {self.path}")
+                temp_file_provider.delete(self.path)
         except:
             pass  # Fail silently
 
@@ -91,17 +100,29 @@ class TempFileProxy(Proxy):
         super().__init__(owned=True)
         self.file_ext = file_ext
 
-        suffix = "" if file_ext is None else f".{file_ext}"
-        self.temp_file = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+        self.suffix = "" if file_ext is None else f".{file_ext}"
+        self.temp_file = None
+
+    @inject
+    def create_file(
+        self,
+        temp_file_provider: TemporaryFilesProvider = Provide[
+            Container.temp_file_provider
+        ],
+    ) -> os.PathLike:
+        return temp_file_provider.new_temporary_file(self.suffix)
 
     @property
     def path(self):
-        return self.temp_file.name
+        if self.temp_file is None:
+            self.temp_file = self.create_file()
+
+        return self.temp_file
 
     @classmethod
     def proxy_for_lines(cls, lines: List[str], *, file_ext):
         proxy = TempFileProxy(file_ext)
-        with open(proxy.temp_file.name, "w") as f:
+        with open(proxy.path, "w") as f:
             f.write("".join(lines))
 
         return proxy
@@ -165,19 +186,6 @@ class ReferenceProxy(Proxy):
 
 
 OutputInfo = namedtuple("OutputInfo", ["file_ext"])
-
-
-def _replace_with_proxy(name, value):
-    if isinstance(value, Proxy):
-        return value
-
-    if isinstance(value, OutputInfo):
-        new_proxy = TempFileProxy(file_ext=value.file_ext)
-        return new_proxy
-
-    raise ValueError(
-        f"Value for {name} must be a Proxy or OutputInfo object if map_outputs=True"
-    )
 
 
 def proxify(f, map_inputs=True, map_outputs=True):
@@ -248,7 +256,7 @@ def proxify(f, map_inputs=True, map_outputs=True):
 
         if not (out_val == 0 or out_val == None) and map_outputs:
             logging.warning(
-                f"Wrapped function returns non-zero value; this value {out_val} will be discared"
+                f"Wrapped function returns non-zero value; this value {out_val} will be discarded"
             )
 
         if len(output_proxies) == 0:
