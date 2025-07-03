@@ -116,7 +116,7 @@ def test_boolean_function(mocker: MockerFixture, flag: bool, rename_flag: bool):
 def test_function_with_defaults(mocker: MockerFixture):
 
     @foreign_function
-    def xmipp_func_with_defaults(*, value=42):
+    def xmipp_func_with_defaults(output="/path/to/output.txt", *, foo: int, value=42):
         pass
 
     container = Container()
@@ -125,7 +125,7 @@ def test_function_with_defaults(mocker: MockerFixture):
     exec_mock = mocker.Mock()
 
     with container.shell_exec.override(exec_mock):
-        xmipp_func_with_defaults()
+        xmipp_func_with_defaults(foo=12)
 
         exec_mock.assert_called_with(
             "xmipp_func_with_defaults",
@@ -133,6 +133,10 @@ def test_function_with_defaults(mocker: MockerFixture):
                 "scipion",
                 "run",
                 "xmipp_func_with_defaults",
+                "-output",
+                "/path/to/output.txt",
+                "--foo",
+                "12",
                 "--value",
                 "42",
             ],

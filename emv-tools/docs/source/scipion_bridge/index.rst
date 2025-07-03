@@ -11,3 +11,4 @@ to simplify handling temporary files.
    :caption: Contents:
    
    foreign_functions
+   proxies
