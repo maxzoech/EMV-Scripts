@@ -157,7 +157,7 @@ def run(args):
     pdb_file = load_cif_as_pdb(cif_path)
     validate_pdb_lines(pdb_file)
 
-    pdb_file = TempFileProxy.proxy_for_lines(pdb_file, file_ext="pdb")
+    pdb_file = TempFileProxy.concatenated_strings(pdb_file, file_ext="pdb")
 
     # Create DeepRes mask
     deepres_mask = create_deepres_mask(pdb_file, emdb_map, metadata)

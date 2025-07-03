@@ -121,7 +121,7 @@ class TempFileProxy(Proxy):
         return self.temp_file
 
     @classmethod
-    def proxy_for_lines(cls, lines: List[str], *, file_ext):
+    def concatenated_strings(cls, lines: List[str], *, file_ext):
         proxy = TempFileProxy(file_ext)
         with open(proxy.path, "w") as f:
             f.write("".join(lines))

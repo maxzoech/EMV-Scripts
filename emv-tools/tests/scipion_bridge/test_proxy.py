@@ -1,6 +1,11 @@
 import os
 
-from emv_tools.scipion_bridge.proxy import proxify, OutputInfo, TempFileProxy
+from emv_tools.scipion_bridge.proxy import (
+    proxify,
+    OutputInfo,
+    TempFileProxy,
+    ReferenceProxy,
+)
 from emv_tools.utils.providers.container import Container
 import pytest
 
@@ -83,6 +88,21 @@ def test_proxy_attr():
         )
 
 
+def test_create_proxy_from_lines():
+    container = Container()
+    container.wire(modules=[__name__])
+
+    temp_file_mock = TempFileMock()
+
+    with container.temp_file_provider.override(temp_file_mock):
+        lines = ["Hello", "World"]
+        files_proxy = TempFileProxy.concatenated_strings(lines, file_ext="txt")
+
+        with open(files_proxy.path) as f:
+            contents = f.read()
+            assert contents == "HelloWorld"
+
+
 def test_nested_proxies():
 
     @proxify
@@ -120,3 +140,43 @@ def test_return_value_warning():
     with container.temp_file_provider.override(temp_file_mock):
         with pytest.warns(UserWarning):
             foo(OutputInfo("bar"))
+
+
+def test_create_reference_proxy():
+
+    ref_proxy = ReferenceProxy("/path/to/referenced/file.vol")
+    assert ref_proxy.path == "/path/to/referenced/file.vol"
+
+
+def test_reassign_proxy():
+
+    container = Container()
+    container.wire(modules=[__name__])
+
+    temp_file_mock = TempFileMock()
+
+    with container.temp_file_provider.override(temp_file_mock):
+
+        untyped_proxy = TempFileProxy(file_ext=None)
+        with open("/tmp/temp_file_0.txt", mode="w+") as f:
+            f.write("Hello world")
+
+        typed_proxy = untyped_proxy.reassign("txt")
+
+        assert typed_proxy.path == "/tmp/temp_file_0.txt"
+
+
+def test_reassign_proxy_file_not_found_error():
+
+    container = Container()
+    container.wire(modules=[__name__])
+
+    temp_file_mock = TempFileMock()
+
+    with container.temp_file_provider.override(temp_file_mock):
+
+        untyped_proxy = TempFileProxy(file_ext=None)
+        # Don't write anything, this will therefore fail
+
+        with pytest.raises(FileNotFoundError):
+            untyped_proxy.reassign("vol")
