@@ -1,4 +1,4 @@
-Scipion Bridge
+User Guide
 =======================
 
 The ``scipion_bridge`` module implements an experimental library for exposing

@@ -17,10 +17,14 @@ release = "0.1"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "autoapi.extension",
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = []
+
+autoapi_dirs = ["../../src/emv_tools"]
+autoapi_type = "python"
 
 
 # -- Options for HTML output -------------------------------------------------
