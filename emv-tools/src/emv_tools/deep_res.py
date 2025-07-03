@@ -31,9 +31,7 @@ def resize_output_volume(output_volume, resolution: int, size: int):
     final_samp = resize_samp / factor
     fourier_v = resize_samp / 2 * final_samp
 
-    output = xmipp_transform_filter(
-        output_volume, OutputInfo("vol"), fourier="low_pass %f" % fourier_v
-    )
+    output = xmipp_transform_filter(output_volume, fourier="low_pass %f" % fourier_v)
 
     return xmipp_image_resize(output, OutputInfo("vol"), dim=size)
 
@@ -49,7 +47,6 @@ def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
     ).reassign("vol")
 
     aligned = xmipp_volume_align(
-        OutputInfo(file_ext="vol"),
         embdb_map=emdb_map,
         volume=volume_pdb,
         local=True,
@@ -57,12 +54,10 @@ def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
     )
 
     mask = xmipp_transform_threshold(
-        aligned, OutputInfo(file_ext="vol"), select="below 0.02", substitute="binarize"
+        aligned, select="below 0.02", substitute="binarize"
     )
 
-    mask = xmipp_transform_morphology(
-        mask, OutputInfo("vol"), binary_operation="dilation", size=2
-    )
+    mask = xmipp_transform_morphology(mask, binary_operation="dilation", size=2)
 
     return mask
 
@@ -182,7 +177,6 @@ def run(args):
 
     # Join the two parts
     deepres_atomic_model = xmipp_pdb_label_from_volume(
-        OutputInfo(file_ext="atom.pdb"),
         pdb=pdb_file,
         volume=deepres_vol,
         mask=deepres_mask,
