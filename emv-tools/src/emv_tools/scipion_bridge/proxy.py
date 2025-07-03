@@ -261,7 +261,7 @@ def proxify(f, map_inputs=True, map_outputs=True):
 
         if len(output_proxies) == 0:
             return None
-        elif len(output_proxies):
+        elif len(output_proxies) == 1:
             return output_proxies[0]
         else:
             return tuple(output_proxies)
