@@ -49,13 +49,25 @@ will be mapped to the following shell command::
     // Call xmipp_volume_align(/output, i1=/emdb_map, i2=/volume, local=True, apply=False)
     scipion run xmipp_volume_align -o ... --i1 ... i2 ... --local ...
 
-``postprocess_fn`` Escape Hatch
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Should the underlying program not conform to the pattern the decorator expects,
-``postprocess_fn`` provides an escape hatch to manually postprocess the arguments.
-It expects a function ``f(x)`` where ``x`` is list with each element a pair of
-the argument name and value. This function is called with all transformations
-applied.
+
+.. note::
+    Should the underlying program not conform to the pattern the decorator expects,
+    ``postprocess_fn`` provides an escape hatch to manually postprocess the
+    arguments::
+
+        def remove_output_label(args):
+            return [[args[0][1]]] + args[1:]
+
+        @partial(foreign_function, postprocess_fn=remove_output_label)
+        def some_function(outputs, *, value: int):
+            pass
+
+            # Is executed as scipion run some_function /path/to/output --value 42
+
+    In the above example, ``remove_output_label`` is passed a list of pairs of
+    argument names and values. It is called with all transformations applied.
+    The function removes the label ``-outputs`` from the first argument.
+
 
 Remapping Parameter Names
 --------------------------
@@ -81,8 +93,6 @@ This will call the following command in the shell::
 
     scipion run xmipp_volume_align ... --i1 ... i2 ... --local ...
 
-Notice that the output is not preceded by ``-o``, which is why this part is
-removed in a custom postprocessing function.
 
 Input Validation
 -----------------

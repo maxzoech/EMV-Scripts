@@ -33,7 +33,7 @@ def resize_output_volume(output_volume, resolution: int, size: int):
 
     output = xmipp_transform_filter(output_volume, fourier="low_pass %f" % fourier_v)
 
-    return xmipp_image_resize(output, OutputInfo("vol"), dim=size)
+    return xmipp_image_resize(output, dim=size)
 
 
 def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
