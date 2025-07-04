@@ -18,4 +18,4 @@ class ShellExecProvider:
         return proc.returncode
 
     def __call__(self, *args, **kwds):
-        self.run(*args, **kwds)
+        return self.run(*args, **kwds)
