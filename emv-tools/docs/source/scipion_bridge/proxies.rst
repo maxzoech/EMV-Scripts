@@ -1,3 +1,4 @@
+.. _proxies:
 Proxies
 ========
 
@@ -43,7 +44,10 @@ temporary file proxy (See :ref:`limitations_modified_path` for more details).
 .. warning::
     Be careful creating owned a ``ReferenceProxy``. When the Python object is
     deallocated, the referenced file is deleted as well! By default, all
-    ``ReferenceProxy`` objects are initialized as unowned.
+    ``ReferenceProxy`` objects are initialized as unowned. If you set
+    ``owned=True``, make sure that only one proxy object refers to the file,
+    as ``Proxy`` objects are always assumed to have a one-to-one mapping
+    with an underlying file.
 
 .. note::
     You do not need to create reference proxies for input files. ``@proxify``'ed

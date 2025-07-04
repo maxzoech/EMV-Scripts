@@ -20,29 +20,19 @@ from ..utils.providers.temp_files import TemporaryFilesProvider
 
 class Proxy:
     """
-    A proxy of an underlying temporary file
+    :Description: A proxy that is backed by a temporary file.
 
-    When working with external xmipp functions, often a temporary file location
-    is necessary to store intermediate results. You can either store those
-    in a custom location, create temporary files yourself using the `tempfile`
-    module or use proxies.
+    When you initialize this class, a temporary file is created to store
+    intermediate results. You usually do not create instances of this class, and
+    instead describe your proxy using the ``OutputInfo`` named tuple and have them
+    created in the ``@proxify`` function.
 
-    Proxies are lightweight Python objects that hold a reference to an
-    underlying file. You can pass those proxies to any function that is
-    decorated with the `@proxify` decorator for arguments that expect a file
-    path. The `proxify` function will pass the associated file path to the
-    original function. For more information see `proxify`.
+    See :ref:`proxies` for more details.
 
-    Proxies are typed using the file type of the underlying extension. Foreign
-    scipion/xmipp functions can validate these extensions using regex to verify
-    that the input data has the correct format. If the file extension is `None`,
-    it is interpreted as any type.
+    :param owned: If the file should be owned by the proxy. Owned files are
+        deleted when the proxy object is dealloced
 
-    Proxies can either be owned or unowned. Owned proxies delete the underlying
-    file when the Python object is deleted, unowned proxies do not. Except for
-    very few use cases you should use owned proxies (Don't wrap input files
-    in unowned proxies, as you can pass the path directly to @proxify'ed
-    functions)
+
     """
 
     def __init__(self, owned=False):
@@ -72,18 +62,18 @@ class Proxy:
 
 class TempFileProxy(Proxy):
     """
-    A proxy that is backed by a temporary file.
+    :Description:  proxy that is backed by a temporary file.
 
     When you initialize this class, a temporary file is created to store
     intermediate results. You usually do not create instances of this class,
-    and instead describe your proxy using the 'OutputInfo' named tuple and have
-    them created in the @proxify function.
+    and instead describe your proxy using the ``OutputInfo`` named tuple and
+    have them created in the ``@proxify`` function.
 
-    Check the documentation for `Proxy` for more information on proxies.
+    See :ref:`proxies` for more details.
 
-    Args:
-        - file_ext: The file extension of the new file. `None` if the file
-        should not have a type
+    :param file_ext: The file extension of the new file. ``None`` if the file should not have a type
+    :type file_ext: str or None
+
     """
 
     def __init__(self, file_ext=None):
@@ -159,22 +149,27 @@ class TempFileProxy(Proxy):
 
 class ReferenceProxy(Proxy):
     """
-    A proxy for an existing file
+    :Description: A proxy for an existing file.
 
     Use this proxy if you want to wrap an existing file in a proxy.
 
-    **Note:** You do not need to wrap input files in a `ReferenceProxy`, you
-    can pass them directly to function decorated with `proxify`
+    .. note::
+        You do not need to wrap input files in a ``ReferenceProxy``, you can
+        pass the path directly to a function decorated with ``@proxify``.
 
-    **Warning:** If you set owned=True, make sure that only one proxy object
-    refers to the file. Otherwise the underlying file will be deleted if one of
-    our instances gets deallocated as `Proxy` objects are always assumed to have
-    a one-to-one mapping with an underlying file.
+    .. warning::
+        If you set ``owned=True``, make sure that only one proxy object refers
+        to the file. Otherwise, the underlying file will be deleted if one of
+        our instances gets deallocated as ``Proxy`` objects are always assumed
+        to have a one-to-one mapping with an underlying file.
 
-    Args:
-        - path: The path of the underlying file
-        - owned: If the file should be owned by the proxy. Owned files are
-        deleted when the proxy object is dealloced
+    See :ref:`proxies` for more details.
+
+    :param path: The path of the underlying file.
+    :type path: str
+    :param owned: If the file should be owned by the proxy. Owned files are deleted when the proxy object is deallocated.
+    :type owned: bool
+
     """
 
     def __init__(self, path: os.PathLike, owned=False):
@@ -191,22 +186,26 @@ OutputInfo = namedtuple("OutputInfo", ["file_ext"])
 
 def proxify(f, map_inputs=True, map_outputs=True):
     """
-    Make a function compatible with proxies.
+    :Description: Make a function compatible with proxies.
 
-    External function wrapped in the `ffi` module have a C-style interface
-    that reads input files and writes its output to files. You can use them by
-    passing file paths or creating temporary paths directly.
+    XMIPP programs wrapped in the ``ffi`` module have a C-style interface
+    that reads input files and writes its output to files. You can use them
+    by passing file paths or creating temporary paths directly.
 
-    If you do not want to managed temporary files directly, you can proxify a
-    function that accepts file paths as parameters:
-        * If you pass a proxy object to any input argument, its path is passed
-        to the wrapped function
-        * For output parameters, pass an instance of the `OutputInfo` object.
-        This function will create a proxy object, pass the path of temporary
-        file to the underlying function and return the proxy objects.
+    If you do not want to manage temporary files directly, ``proxify`` provides
+    syntactic sugar to provide a more ergonomic interface when working with them
+    in Python:
 
-    **Note:** When using `proxify` to return output values, the original return
-    value of the function is lost.
+    * If you pass a proxy object to any input argument, the path of its associated file is passed to the wrapped function.
+    * For output parameters, pass an instance of the ``OutputInfo`` object. This function will create a proxy object, and passes the path of the temporary file to the underlying function, and return the proxy objects.
+
+    .. note:: When using ``@proxify`` to return output values, the original return value of the function is lost.
+
+    See :ref:`proxies` for more details.
+
+    :param map_inputs: A boolean indicating if input proxies should be mapped
+    :param map_outputs: A boolean indicating if output proxies should be mapped
+
     """
 
     signature = inspect.signature(f)
