@@ -40,4 +40,5 @@ jobs:
       - name: Test with pytest
         run: |
           cd emv-tools
+          pip install .
           python -m pytest --cov=emv_tools tests
