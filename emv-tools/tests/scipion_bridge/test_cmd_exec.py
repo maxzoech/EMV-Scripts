@@ -1,7 +1,7 @@
 import os
 import pytest
 import tempfile
-from emv_tools.utils.providers.cmd_exec import ShellExecProvider
+from emv_tools.scipion_bridge.env.cmd_exec import ShellExecProvider
 from subprocess import PIPE
 
 
