@@ -6,6 +6,8 @@ class ShellExecProvider:
 
     def run(self, func_name, args: List[str], run_args):
         cmd = " ".join(args)
+        print(cmd)
+
         proc = Popen(cmd, **run_args)
         _, err = proc.communicate()  # Blocks until finished
         if proc.returncode != 0:

@@ -1,13 +1,11 @@
 import os
-import shutil
 
 import inspect
-import tempfile
-import logging
+import pathlib
 import warnings
 
 from functools import wraps
-from typing import Optional, List
+from typing import List
 
 from collections import namedtuple
 
@@ -35,12 +33,24 @@ class Proxy:
 
     """
 
-    def __init__(self, owned=False):
+    def __init__(self, file_ext: str, owned=False):
+        self.file_ext = file_ext
         self.owned = owned
 
     @property
     def path(self):
         raise NotImplementedError("Implement in subclass")  # pragma: no cover
+
+    def _ipython_display_(self):
+        from .visualize import registry
+
+        try:
+            visualizer = registry.visualizers[self.file_ext]
+        except KeyError:
+            print(f"No visualizer registered for file extension {self.file_ext}")
+            return
+
+        visualizer.show(self.path)
 
     @inject
     def __del__(
@@ -88,8 +98,7 @@ class TempFileProxy(Proxy):
             also interpreted as the _type_ of the proxy. If `None` the file will
             have no extension and the proxy is interpreted to be typed as any.
         """
-        super().__init__(owned=True)
-        self.file_ext = file_ext
+        super().__init__(file_ext=file_ext, owned=True)
 
         self.suffix = "" if file_ext is None else f".{file_ext}"
         self.temp_file = None
@@ -173,7 +182,9 @@ class ReferenceProxy(Proxy):
     """
 
     def __init__(self, path: os.PathLike, owned=False):
-        super().__init__(owned)
+        file_ext = "".join(pathlib.Path(path).suffixes)[1:]
+
+        super().__init__(file_ext, owned)
         self._path = path
 
     @property

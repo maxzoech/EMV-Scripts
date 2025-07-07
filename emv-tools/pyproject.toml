@@ -1,17 +1,16 @@
-[project]
+[tool.poetry]
 name = "emv-tools"
 version = "0.1.0"
 description = "A Python tool to convert validation data on VRS to a format compatible with 3DBionotes"
-authors = [{ name = "Max Zoech", email = "maximilian.zoech@cnb.csic.es" }]
+authors = ["Max Zoech <maximilian.zoech@cnb.csic.es>"]
 readme = "README.md"
-requires-python = ">=3.9"
-dependencies = [
-    "dependency-injector (>=4.48.1,<5.0.0)",
-    "autopep8 (>=2.3.2,<3.0.0)",
-]
-
-[tool.poetry]
 packages = [{ include = "emv_tools", from = "src" }]
+python = ">=3.8"
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+dependency-injector = ">=4.48.1,<5.0.0"
+autopep8 = ">=2.3.0,<3.0.0"
 
 [tool.poetry.group.test]
 optional = true
@@ -22,5 +21,5 @@ pytest-mock = "*"
 pytest-cov = "*"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0,<2.0.0"]
 build-backend = "poetry.core.masonry.api"
