@@ -6,7 +6,7 @@ from emv_tools.scipion_bridge.proxy import (
     TempFileProxy,
     ReferenceProxy,
 )
-from emv_tools.scipion_bridge.env.container import Container
+from emv_tools.scipion_bridge.environment.container import Container
 import pytest
 
 

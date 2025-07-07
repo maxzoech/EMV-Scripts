@@ -2,7 +2,7 @@ import re
 import pathlib
 
 import emv_tools.utils
-import emv_tools.scipion_bridge.env
+import emv_tools.scipion_bridge.environment
 import xmippLib
 import logging
 import argparse
@@ -13,7 +13,7 @@ from .scipion_bridge.proxy import TempFileProxy, OutputInfo
 from .utils.conversion import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
 from .utils.bws import save_for_bws
-from .scipion_bridge.env.container import Container
+from .scipion_bridge.environment.container import Container
 
 from collections import namedtuple
 from emv_tools.download import EMDBMetadata, download_emdb_metadata
@@ -188,6 +188,6 @@ def main():
 
 if __name__ == "__main__":
 
-    emv_tools.scipion_bridge.env.configure_default_env()
+    emv_tools.scipion_bridge.environment.configure_default_env()
 
     main()

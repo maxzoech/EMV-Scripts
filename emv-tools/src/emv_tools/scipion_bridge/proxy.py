@@ -12,8 +12,8 @@ from collections import namedtuple
 from ..utils.func_params import extract_func_params
 
 from dependency_injector.wiring import Provide, inject
-from .env.container import Container
-from .env.temp_files import TemporaryFilesProvider
+from .environment.container import Container
+from .environment.temp_files import TemporaryFilesProvider
 
 
 class Proxy:
