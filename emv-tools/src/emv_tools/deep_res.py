@@ -1,15 +1,19 @@
 import re
 import pathlib
+
+import emv_tools.utils
+import emv_tools.scipion_bridge.env
 import xmippLib
 import logging
 import argparse
 
+import emv_tools
 from .ffi.scipion import *
 from .scipion_bridge.proxy import TempFileProxy, OutputInfo
 from .utils.conversion import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
 from .utils.bws import save_for_bws
-from .utils.providers.container import Container
+from .scipion_bridge.env.container import Container
 
 from collections import namedtuple
 from emv_tools.download import EMDBMetadata, download_emdb_metadata
@@ -166,6 +170,8 @@ def run(args):
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )
 
+    print(deepres_atomic_model)
+
     save_for_bws(deepres_atomic_model, output_path, volume_map="", atomic_model="")
 
 
@@ -180,11 +186,8 @@ def main():
     run(args)
 
 
-from .utils.providers.container import Container
-
 if __name__ == "__main__":
 
-    container = Container()
-    container.wire(modules=[__name__, ".ffi.scipion"])
+    emv_tools.scipion_bridge.env.configure_default_env()
 
     main()

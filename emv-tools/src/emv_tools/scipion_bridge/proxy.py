@@ -12,8 +12,8 @@ from collections import namedtuple
 from ..utils.func_params import extract_func_params
 
 from dependency_injector.wiring import Provide, inject
-from ..utils.providers.container import Container
-from ..utils.providers.temp_files import TemporaryFilesProvider
+from .env.container import Container
+from .env.temp_files import TemporaryFilesProvider
 
 
 class Proxy:
@@ -27,6 +27,7 @@ class Proxy:
 
     See :ref:`proxies` for more details.
 
+    :param file_ext: The file extension of the wrapped file
     :param owned: If the file should be owned by the proxy. Owned files are
         deleted when the proxy object is dealloced
 

@@ -3,7 +3,7 @@ from functools import partial
 
 from emv_tools.scipion_bridge.external_call import foreign_function
 
-from emv_tools.utils.providers.container import Container
+from emv_tools.scipion_bridge.env.container import Container
 import pytest
 from pytest_mock import MockerFixture
 

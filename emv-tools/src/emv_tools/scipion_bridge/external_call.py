@@ -5,8 +5,8 @@ from subprocess import Popen, PIPE
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
 
-from ..utils.providers.container import Container
-from ..utils.providers.cmd_exec import ShellExecProvider
+from .env.container import Container
+from .env.cmd_exec import ShellExecProvider
 
 import ast
 import inspect
