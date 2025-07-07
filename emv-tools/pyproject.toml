@@ -5,7 +5,6 @@ description = "A Python tool to convert validation data on VRS to a format compa
 authors = ["Max Zoech <maximilian.zoech@cnb.csic.es>"]
 readme = "README.md"
 packages = [{ include = "emv_tools", from = "src" }]
-python = ">=3.8"
 
 [tool.poetry.dependencies]
 python = ">=3.8"
