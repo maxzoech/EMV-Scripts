@@ -1,8 +1,11 @@
 import os
 import pytest
 import tempfile
+from emv_tools.scipion_bridge.external_call import Domain
 from emv_tools.scipion_bridge.environment.cmd_exec import ShellExecProvider
 from subprocess import PIPE
+
+PYTHON_DOMAIN = Domain("PY", "python")
 
 
 def test_shell_exec():
@@ -11,8 +14,8 @@ def test_shell_exec():
 
     output = provider(
         "python",
+        PYTHON_DOMAIN,
         [
-            "python",
             "-c",
             '"import sys; sys.exit(0)"',
         ],
@@ -24,8 +27,8 @@ def test_shell_exec():
     with pytest.raises(RuntimeError):
         output = provider(
             "python",
+            PYTHON_DOMAIN,
             [
-                "python",
                 "-c",
                 '"import sys; sys.exit(42)"',
             ],

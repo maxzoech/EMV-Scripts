@@ -1,11 +1,15 @@
 from functools import partial
-from ..scipion_bridge.external_call import foreign_function
+from collections import namedtuple
+
+from ..scipion_bridge.external_call import foreign_function, Domain
 from ..scipion_bridge.proxy import proxify, OutputInfo
+
+xmipp_func = partial(foreign_function, domain=Domain("XMIPP", "scipion run"))
 
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={"inputs": "i", "outputs": "o"},
     args_validation={
         "outputs": "(.+)\.vol",
@@ -21,7 +25,7 @@ def xmipp_transform_filter(
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={"inputs": "i", "outputs": "o"},
     args_validation={"outputs": "(.+)\.vol", "inputs": "(.+)\.vol"},
 )
@@ -33,7 +37,7 @@ def xmipp_image_resize(
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={"inputs": "i", "outputs": "o", "center_pdb": "centerPDB"},
     args_validation={
         # "inputs": "(.+)\.ent",
@@ -53,7 +57,7 @@ def postprocess_volume_align_args(raw_args):
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={
         "embdb_map": "i1",
         "volume": "i2",
@@ -72,7 +76,7 @@ def xmipp_volume_align(
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={
         "aligned_vol": "i",
         "outputs": "o",
@@ -90,7 +94,7 @@ def xmipp_transform_threshold(
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={"inputs": "i", "outputs": "o", "binary_operation": "binaryOperation"},
     args_validation={
         "inputs": "(.+)\.vol",
@@ -105,7 +109,7 @@ def xmipp_transform_morphology(
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={
         "outputs": "o",
         "volume": "vol",
@@ -125,7 +129,7 @@ def xmipp_pdb_label_from_volume(
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={
         "inputs": "i",
         "outputs": "o",
@@ -143,7 +147,7 @@ def xmipp_transform_threshold(
 
 @proxify
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={
         "outputs": "o",
         "volume": "vol",

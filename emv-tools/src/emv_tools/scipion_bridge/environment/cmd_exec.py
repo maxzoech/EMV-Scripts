@@ -4,9 +4,11 @@ from subprocess import Popen, PIPE
 
 class ShellExecProvider:
 
-    def run(self, func_name, args: List[str], run_args):
+    def run(self, func_name, domain, args: List[str], run_args):
+        args = [domain.command] + args
+
         cmd = " ".join(args)
-        print(cmd)
+        print(f"[{domain.name}] {cmd}")
 
         proc = Popen(cmd, **run_args)
         _, err = proc.communicate()  # Blocks until finished

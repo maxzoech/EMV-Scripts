@@ -1,19 +1,22 @@
 import itertools
 from functools import partial
 
-from emv_tools.scipion_bridge.external_call import foreign_function
+from emv_tools.scipion_bridge.external_call import foreign_function, Domain
 from emv_tools.scipion_bridge.environment.container import Container
 
 import pytest
 from pytest_mock import MockerFixture
 
+xmipp_domain = Domain("XMIPP", "scipion run")
+xmipp_func = partial(foreign_function, domain=xmipp_domain)
 
-@foreign_function
+
+@xmipp_func
 def xmipp_to_something(inputs: str, outputs: str, *, keyword_param: int) -> int:
     pass
 
 
-def test_basic_foreign_function(mocker: MockerFixture):
+def test_basic_xmipp_func(mocker: MockerFixture):
 
     container = Container()
     container.wire(modules=[__name__])
@@ -25,6 +28,7 @@ def test_basic_foreign_function(mocker: MockerFixture):
 
         exec_mock.assert_called_with(
             "xmipp_to_something",
+            xmipp_domain,
             [
                 "scipion",
                 "run",
@@ -40,14 +44,14 @@ def test_basic_foreign_function(mocker: MockerFixture):
         )
 
 
-@partial(foreign_function, args_map={"inputs": "i", "outputs": "o"})
+@partial(xmipp_func, args_map={"inputs": "i", "outputs": "o"})
 def xmipp_to_something_with_mapping(
     inputs: str, outputs: str, *, keyword_param: int
 ) -> int:
     pass
 
 
-def test_basic_foreign_function_with_mapping(mocker: MockerFixture):
+def test_basic_xmipp_func_with_mapping(mocker: MockerFixture):
 
     container = Container()
     container.wire(modules=[__name__])
@@ -59,6 +63,7 @@ def test_basic_foreign_function_with_mapping(mocker: MockerFixture):
 
         exec_mock.assert_called_with(
             "xmipp_to_something_with_mapping",
+            xmipp_domain,
             [
                 "scipion",
                 "run",
@@ -87,7 +92,7 @@ def test_boolean_function(mocker: MockerFixture, flag: bool, rename_flag: bool):
         {"inputs": "i", "boolean_flag": flag_name} if rename_flag else {"inputs": "i"}
     )
 
-    _xmipp_boolean = foreign_function(xmipp_boolean, args_map=args_map)
+    _xmipp_boolean = xmipp_func(xmipp_boolean, args_map=args_map)
 
     container = Container()
     container.wire(modules=[__name__])
@@ -101,6 +106,7 @@ def test_boolean_function(mocker: MockerFixture, flag: bool, rename_flag: bool):
 
         exec_mock.assert_called_with(
             "xmipp_boolean",
+            xmipp_domain,
             [
                 "scipion",
                 "run",
@@ -115,7 +121,7 @@ def test_boolean_function(mocker: MockerFixture, flag: bool, rename_flag: bool):
 
 def test_function_with_defaults(mocker: MockerFixture):
 
-    @foreign_function
+    @xmipp_func
     def xmipp_func_with_defaults(output="/path/to/output.txt", *, foo: int, value=42):
         pass
 
@@ -129,6 +135,7 @@ def test_function_with_defaults(mocker: MockerFixture):
 
         exec_mock.assert_called_with(
             "xmipp_func_with_defaults",
+            xmipp_domain,
             [
                 "scipion",
                 "run",
@@ -150,18 +157,16 @@ def xmipp_invalid_func():
 
 def test_non_empty_function():
     with pytest.raises(RuntimeError):
-        foreign_function(xmipp_invalid_func)
+        xmipp_func(xmipp_invalid_func)
 
     with pytest.raises(RuntimeError):
-        foreign_function(
-            lambda x: x + 2
-        )  # Just pass an expression which is not allowed
+        xmipp_func(lambda x: x + 2)  # Just pass an expression which is not allowed
 
 
 def test_inner_func_definition():
     try:
 
-        @partial(foreign_function)
+        @partial(xmipp_func)
         def xmipp_to_something_with_mapping():
             pass
 
@@ -175,11 +180,11 @@ def xmipp_invalid_flag_function(some_flag: bool):
 
 def test_invalid_boolean_args_definition():
     with pytest.raises(RuntimeError):
-        foreign_function(xmipp_invalid_flag_function)
+        xmipp_func(xmipp_invalid_flag_function)
 
 
 @partial(
-    foreign_function,
+    xmipp_func,
     args_map={"some_argument": "renamed"},
     args_validation={"some_argument": "(.+)\\.vol"},
 )
@@ -198,6 +203,7 @@ def test_argument_validation(mocker: MockerFixture):  # , arg_name):
 
         exec_mock.assert_called_with(
             "xmipp_function_with_validation",
+            xmipp_domain,
             [
                 "scipion",
                 "run",
@@ -212,7 +218,7 @@ def test_argument_validation(mocker: MockerFixture):  # , arg_name):
             xmipp_function_with_validation("/some/path/to/file.invalid")
 
 
-@partial(foreign_function, postprocess_fn=lambda x: [[x[0][1]]] + x[1:])
+@partial(xmipp_func, postprocess_fn=lambda x: [[x[0][1]]] + x[1:])
 def xmipp_func_custom_postprocessing(argument: str, *, flag: bool):
     pass
 
@@ -228,6 +234,7 @@ def test_custom_postprocessing(mocker: MockerFixture):
 
         exec_mock.assert_called_with(
             "xmipp_func_custom_postprocessing",
+            xmipp_domain,
             [
                 "scipion",
                 "run",
@@ -240,4 +247,4 @@ def test_custom_postprocessing(mocker: MockerFixture):
 
 
 if __name__ == "__main__":
-    test_basic_foreign_function()
+    test_basic_xmipp_func()

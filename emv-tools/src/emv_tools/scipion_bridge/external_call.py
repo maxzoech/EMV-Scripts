@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+from dataclasses import dataclass
 from subprocess import Popen, PIPE
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
@@ -18,6 +19,12 @@ import functools
 from functools import partial
 
 from ..utils.func_params import extract_func_params
+
+
+@dataclass
+class Domain:
+    name: str
+    command: str
 
 
 def _func_is_empty(func):
@@ -57,7 +64,12 @@ def _param_to_cmd_args(
 
 
 def foreign_function(
-    f, args_map=None, args_validation=None, postprocess_fn=None, **run_args
+    f,
+    domain: Domain,
+    args_map=None,
+    args_validation=None,
+    postprocess_fn=None,
+    **run_args,
 ):
     """
     Use this decorator to expose XMIPP programs to Python.
@@ -139,7 +151,7 @@ def foreign_function(
         raw_args = itertools.chain.from_iterable(raw_args)
         raw_args = ["scipion", "run", f.__name__, *raw_args]
 
-        return __scipion_bridge_runner__(f.__name__, raw_args, run_args)
+        return __scipion_bridge_runner__(f.__name__, domain, raw_args, run_args)
 
     return wrapper
 
