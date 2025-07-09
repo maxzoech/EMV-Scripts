@@ -16,6 +16,7 @@ def test_shell_exec():
         "python",
         PYTHON_DOMAIN,
         [
+            "python",
             "-c",
             '"import sys; sys.exit(0)"',
         ],
@@ -29,6 +30,7 @@ def test_shell_exec():
             "python",
             PYTHON_DOMAIN,
             [
+                "python",
                 "-c",
                 '"import sys; sys.exit(42)"',
             ],
