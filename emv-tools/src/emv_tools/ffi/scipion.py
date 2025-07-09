@@ -1,10 +1,9 @@
 from functools import partial
-from collections import namedtuple
 
 from ..scipion_bridge.external_call import foreign_function, Domain
 from ..scipion_bridge.proxy import proxify, OutputInfo
 
-xmipp_func = partial(foreign_function, domain=Domain("XMIPP", "scipion run"))
+xmipp_func = partial(foreign_function, domain=Domain("XMIPP", ["scipion", "run"]))
 
 
 @proxify
@@ -66,10 +65,10 @@ def postprocess_volume_align_args(raw_args):
         "embdb_map": "(.+)\.map",
         "volume": "(.+)\.vol",
     },
-    postprocess_fn=postprocess_volume_align_args,
+    # postprocess_fn=postprocess_volume_align_args,
 )
 def xmipp_volume_align(
-    outputs=OutputInfo("vol"), *, embdb_map: str, volume: str, local: bool, apply: bool
+    *, embdb_map: str, volume: str, local: bool, apply=OutputInfo("vol")
 ):
     pass
 
@@ -154,7 +153,7 @@ def xmipp_transform_threshold(
     },
     args_validation={
         "outputs": "(.+)\.atom.pdb",
-        "pdb": "(.+)\.pdb",
+        # "pdb": "(.+)\.pdb",
         "volume": "(.+)\.vol",
     },
 )
@@ -167,4 +166,22 @@ def xmipp_pdb_label_from_volume(
     sampling: str,
     origin: str
 ):
+    pass
+
+
+@proxify
+@partial(xmipp_func, args_map={"inputs": "i", "outputs": "o", "astype": "t"})
+def xmipp_image_convert(inputs: str, outputs=OutputInfo("mrc"), astype: str = "vol"):
+    pass
+
+
+@proxify
+@partial(xmipp_func, args_map={"inputs": "i", "sampling": "s"})
+def xmipp_image_header(inputs: str, sampling: float):
+    pass
+
+
+@proxify
+@partial(xmipp_func, args_map={"inputs": "i", "outputs": "o"})
+def xmipp_image_operate(inputs: str, outputs=OutputInfo("vol"), *, minus: str):
     pass

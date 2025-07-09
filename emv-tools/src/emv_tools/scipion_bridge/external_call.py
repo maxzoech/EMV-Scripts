@@ -12,7 +12,7 @@ from .environment.cmd_exec import ShellExecProvider
 import ast
 import inspect
 import autopep8
-from typing import Dict, Any, Callable, Set
+from typing import Dict, Any, Callable, Set, List
 
 import itertools
 import functools
@@ -23,7 +23,7 @@ from ..utils.func_params import extract_func_params
 
 @dataclass
 class Domain:
-    name: str
+    name: List[str]
     command: str
 
 
@@ -66,6 +66,7 @@ def _param_to_cmd_args(
 def foreign_function(
     f,
     domain: Domain,
+    func_name=None,
     args_map=None,
     args_validation=None,
     postprocess_fn=None,
@@ -94,6 +95,8 @@ def foreign_function(
         args_map = {}
     if args_validation is None:
         args_validation = {}
+
+    func_name = func_name if func_name is not None else f.__name__
 
     params = inspect.signature(f).parameters
     boolean_params = {k for k, v in f.__annotations__.items() if v is bool}
@@ -149,9 +152,9 @@ def foreign_function(
             raw_args = postprocess_fn(raw_args)
 
         raw_args = itertools.chain.from_iterable(raw_args)
-        raw_args = ["scipion", "run", f.__name__, *raw_args]
+        raw_args = domain.command + [func_name, *raw_args]
 
-        return __scipion_bridge_runner__(f.__name__, domain, raw_args, run_args)
+        return __scipion_bridge_runner__(func_name, domain, raw_args, run_args)
 
     return wrapper
 

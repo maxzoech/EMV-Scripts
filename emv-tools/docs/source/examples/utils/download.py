@@ -10,6 +10,8 @@ from collections import namedtuple
 EMDB_EBI_REPOSITORY = "https://ftp.ebi.ac.uk/pub/databases/emdb/structures"
 EMDB_EBI_JSON_REPOSITORY = "https://www.ebi.ac.uk/emdb/api/entry"
 PDB_EBI_REPOSITORY = "https://www.ebi.ac.uk/pdbe/entry-files/download"
+EMDB_FTP_SERVER = "ftp.ebi.ac.uk"
+EMDB_EBI_REPOSITORY_HALFMAPS = "https://ftp.ebi.ac.uk/pub/databases/emdb/structures/EMD-%s/other/"
 
 EMDBMetadata = namedtuple("EMDBMetadata", ("pdb_id", "resolution", "sampling", "size", "org_x", "org_y", "org_z"))
 
@@ -67,6 +69,12 @@ def _download(url, location: os.PathLike, force: bool):
     return location
 
 
+def _decompress(compressed: os.PathLike, dest_path: os.PathLike):
+    with gzip.open(compressed, 'rb') as f_in, open(dest_path, 'wb') as f_out:
+        shutil.copyfileobj(f_in, f_out)
+
+    return dest_path
+
 def download_emdb_map(map_id, path: os.PathLike, force_download=False):
     path = Path(path)
 
@@ -77,14 +85,31 @@ def download_emdb_map(map_id, path: os.PathLike, force_download=False):
     dest_path_compressed = path / gz_filename
     dest_path = path / filename
 
-    _ = _download(url, dest_path_compressed, force=force_download)
+    return _decompress(
+        _download(url, dest_path_compressed, force=force_download),
+        dest_path
+    )
 
-    with gzip.open(dest_path_compressed, 'rb') as f_in:
-        with open(dest_path, 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
 
-    return dest_path
+def _download_halfmap(emdb_entry, location: os.PathLike, half: int, force_download: bool):
+    halfmap_name = f"emd_{emdb_entry}_half_map_{half}.map"
+    halfmap_name_compressed = halfmap_name + ".gz"
+    
+    halfmap_url = EMDB_EBI_REPOSITORY_HALFMAPS % emdb_entry + halfmap_name_compressed
+    compressed_dest = location / halfmap_name_compressed
+    halfmap_dest = location / halfmap_name
+    
+    return _decompress(
+        _download(halfmap_url, compressed_dest, force=force_download),
+        halfmap_dest
+    )
 
+def download_halfmaps(emdb_entry, location: os.PathLike, force_download=False):
+    map_1 = _download_halfmap(emdb_entry, location, half=1, force_download=force_download)
+    map_2 = _download_halfmap(emdb_entry, location, half=2, force_download=force_download)
+
+    return map_1, map_2
+    
 
 def download_pdb_model(pdb_id, path: os.PathLike, force_download=False):
     path = Path(path)

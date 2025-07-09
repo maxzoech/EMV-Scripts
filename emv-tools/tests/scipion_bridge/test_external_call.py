@@ -7,7 +7,7 @@ from emv_tools.scipion_bridge.environment.container import Container
 import pytest
 from pytest_mock import MockerFixture
 
-xmipp_domain = Domain("XMIPP", "scipion run")
+xmipp_domain = Domain("XMIPP", ["scipion", "run"])
 xmipp_func = partial(foreign_function, domain=xmipp_domain)
 
 

@@ -5,7 +5,6 @@ from subprocess import Popen, PIPE
 class ShellExecProvider:
 
     def run(self, func_name, domain, args: List[str], run_args):
-        args = [domain.command] + args
 
         cmd = " ".join(args)
         print(f"[{domain.name}] {cmd}")
