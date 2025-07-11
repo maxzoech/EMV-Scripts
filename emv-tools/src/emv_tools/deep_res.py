@@ -1,113 +1,18 @@
-import re
 import pathlib
 
-import emv_tools.utils
 import emv_tools.scipion_bridge.environment
-import xmippLib
 import logging
 import argparse
 
 import emv_tools
 from .ffi.scipion import *
-from .scipion_bridge.proxy import TempFileProxy, OutputInfo
+from .scipion_bridge.proxy import TempFileProxy
 from .utils.conversion import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
 from .utils.bws import save_for_bws
-from .scipion_bridge.environment.container import Container
 
-from collections import namedtuple
-from emv_tools.download import EMDBMetadata, download_emdb_metadata
-
-InputFiles = namedtuple("InputFile", ["emdb_map", "deepres_vol", "structure", "mask"])
-
-
-@proxify
-def resize_output_volume(output_volume, resolution: int, size: int):
-    if resolution >= 2.7:
-        resize_samp = 1.0
-    else:
-        resize_samp = 0.5
-
-    out_v = xmippLib.Image(output_volume).getData()
-    z, _, _ = out_v.shape
-
-    factor = size / z
-    final_samp = resize_samp / factor
-    fourier_v = resize_samp / 2 * final_samp
-
-    output = xmipp_transform_filter(output_volume, fourier="low_pass %f" % fourier_v)
-
-    return xmipp_image_resize(output, dim=size)
-
-
-def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
-
-    volume_pdb = xmipp_volume_from_pdb(
-        pdb_file,
-        OutputInfo(None),
-        center_pdb="-v 0",
-        sampling=metadata.sampling,
-        size=metadata.size,
-    ).reassign("vol")
-
-    aligned = xmipp_volume_align(embdb_map=emdb_map, volume=volume_pdb, local=True)
-
-    mask = xmipp_transform_threshold(
-        aligned, select="below 0.02", substitute="binarize"
-    )
-
-    mask = xmipp_transform_morphology(mask, binary_operation="dilation", size=2)
-
-    return mask
-
-
-def find_files(*, scipion_project_root):
-    scipion_project_root = pathlib.Path(scipion_project_root)
-
-    def _glob_re(pattern, strings):
-        pattern = re.compile(pattern)
-        return filter(lambda x: pattern.match(str(x)), strings)
-
-    def _find_file(directory, *, suffix, label, pattern=".*"):
-        cands = list(_glob_re(pattern, directory.glob(f"*.{suffix}")))
-        if len(cands) > 1:
-            cands_str = "\n".join(map(str, cands))
-            logging.warning(
-                f"More than one candidate found for {label}, the behavior is undefined:\n{cands_str}"
-            )
-        elif len(cands) == 0:
-            raise ValueError(f"No results for {label} in scipion project")
-
-        return cands[0]
-
-    # EMDB map
-    emdb_map = _find_file(
-        scipion_project_root / "Runs" / "000002_ProtImportVolumes" / "extra",
-        suffix="map",
-        pattern="(.*)emd_([0-9]+).map",
-        label="map file",
-    )
-
-    deepres_vol = _find_file(
-        scipion_project_root / "Runs" / "000581_XmippProtDeepRes" / "extra",
-        suffix="vol",
-        pattern="(.*)deepRes_resolution_originalSize.vol",
-        label="DeepRes volume",
-    )
-
-    # 000289_XmippProtCreateMask3D
-    deepres_mask = _find_file(
-        scipion_project_root / "Runs" / "000289_XmippProtCreateMask3D",
-        suffix="mrc",
-        pattern="(.*).mrc",
-        label="DeepRes mask",
-    )
-
-    structure = _find_file(scipion_project_root, suffix="cif", label="CIF file")
-
-    return InputFiles(
-        str(emdb_map), str(deepres_vol), str(structure), str(deepres_mask)
-    )
+from emv_tools.download import download_emdb_metadata
+from .utils.find_files import find_files, InputFiles
 
 
 def _setup_parser_args(parser):
@@ -153,6 +58,10 @@ def run(args):
         logging.error("No file provided for DeepRes volume")
         exit(-1)
 
+    if mask_vol is None:
+        logging.error("No file provided for mask volume")
+        exit(-1)
+
     if cif_path is None:
         logging.error("No file provided for atomic model")
         exit(-1)
@@ -169,13 +78,6 @@ def run(args):
     print(mask_vol)
 
     pdb_file = TempFileProxy.concatenated_strings(pdb_file, file_ext="pdb")
-
-    # Create DeepRes mask
-    # deepres_mask = create_deepres_mask(pdb_file, emdb_map, metadata)
-
-    # import shutil
-
-    # shutil.copy(deepres_mask.path, "data/deepres_mask.vol")
 
     # Join the two parts
     deepres_atomic_model = xmipp_pdb_label_from_volume(

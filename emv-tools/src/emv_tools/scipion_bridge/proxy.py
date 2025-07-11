@@ -9,7 +9,7 @@ from typing import List
 
 from collections import namedtuple
 
-from ..utils.func_params import extract_func_params
+from .func_params import extract_func_params
 
 from dependency_injector.wiring import Provide, inject
 from .environment.container import Container

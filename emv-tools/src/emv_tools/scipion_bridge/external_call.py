@@ -18,7 +18,7 @@ import itertools
 import functools
 from functools import partial
 
-from ..utils.func_params import extract_func_params
+from .func_params import extract_func_params
 
 
 @dataclass

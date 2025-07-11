@@ -16,4 +16,5 @@ documentation for details.
    :caption: Contents:
    
    scipion_bridge/index
+   examples
    autoapi/index
