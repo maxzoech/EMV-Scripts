@@ -18,7 +18,7 @@ from .scipion_bridge.environment.container import Container
 from collections import namedtuple
 from emv_tools.download import EMDBMetadata, download_emdb_metadata
 
-InputFiles = namedtuple("InputFile", ["emdb_map", "deepres_vol", "structure"])
+InputFiles = namedtuple("InputFile", ["emdb_map", "deepres_vol", "structure", "mask"])
 
 
 @proxify
@@ -50,12 +50,7 @@ def create_deepres_mask(pdb_file: str, emdb_map: str, metadata: EMDBMetadata):
         size=metadata.size,
     ).reassign("vol")
 
-    aligned = xmipp_volume_align(
-        embdb_map=emdb_map,
-        volume=volume_pdb,
-        local=True,
-        apply=True,
-    )
+    aligned = xmipp_volume_align(embdb_map=emdb_map, volume=volume_pdb, local=True)
 
     mask = xmipp_transform_threshold(
         aligned, select="below 0.02", substitute="binarize"
@@ -94,15 +89,25 @@ def find_files(*, scipion_project_root):
     )
 
     deepres_vol = _find_file(
-        scipion_project_root / "Runs" / "000727_XmippProtDeepRes" / "extra",
+        scipion_project_root / "Runs" / "000581_XmippProtDeepRes" / "extra",
         suffix="vol",
         pattern="(.*)deepRes_resolution_originalSize.vol",
         label="DeepRes volume",
     )
 
+    # 000289_XmippProtCreateMask3D
+    deepres_mask = _find_file(
+        scipion_project_root / "Runs" / "000289_XmippProtCreateMask3D",
+        suffix="mrc",
+        pattern="(.*).mrc",
+        label="DeepRes mask",
+    )
+
     structure = _find_file(scipion_project_root, suffix="cif", label="CIF file")
 
-    return InputFiles(str(emdb_map), str(deepres_vol), str(structure))
+    return InputFiles(
+        str(emdb_map), str(deepres_vol), str(structure), str(deepres_mask)
+    )
 
 
 def _setup_parser_args(parser):
@@ -116,8 +121,9 @@ def _setup_parser_args(parser):
         "--output", "-o", help="Path to write the converted .json file", required=True
     )
 
-    parser.add_argument("--map", "-m", help="EMDB .map file")
+    parser.add_argument("--map", "-map", help="EMDB .map file")
     parser.add_argument("--volume", "-v", help="Volume file produced by DeepRes")
+    parser.add_argument("--mask", "-msk", help="Volume mask for DeepRes")
     parser.add_argument("--structure", "-s", help="Aligned atomic model as a CIF file")
 
 
@@ -134,6 +140,7 @@ def run(args):
 
     emdb_map = _default(input_files.emdb_map, args.map)
     deepres_vol = _default(input_files.deepres_vol, args.volume)
+    mask_vol = _default(input_files.mask, args.mask)
     cif_path = _default(input_files.structure, args.structure)
 
     output_path = pathlib.Path(args.output) / "deepres_converted.json"
@@ -151,21 +158,30 @@ def run(args):
         exit(-1)
 
     # Load files
-    metadata = download_emdb_metadata(41510)  # Get from header instead
+    metadata = download_emdb_metadata(12665)  # Get from header instead
 
     pdb_file = load_cif_as_pdb(cif_path)
     validate_pdb_lines(pdb_file)
 
+    print(cif_path)
+    print(emdb_map)
+    print(deepres_vol)
+    print(mask_vol)
+
     pdb_file = TempFileProxy.concatenated_strings(pdb_file, file_ext="pdb")
 
     # Create DeepRes mask
-    deepres_mask = create_deepres_mask(pdb_file, emdb_map, metadata)
+    # deepres_mask = create_deepres_mask(pdb_file, emdb_map, metadata)
+
+    # import shutil
+
+    # shutil.copy(deepres_mask.path, "data/deepres_mask.vol")
 
     # Join the two parts
     deepres_atomic_model = xmipp_pdb_label_from_volume(
         pdb=pdb_file,
         volume=deepres_vol,
-        mask=deepres_mask,
+        mask=mask_vol,
         sampling=metadata.sampling,
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )

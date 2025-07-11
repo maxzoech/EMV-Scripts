@@ -121,7 +121,7 @@ def xmipp_pdb_label_from_volume(
     volume: str,
     mask: str,
     sampling,
-    origin: str
+    origin: str,
 ):
     pass
 
@@ -154,7 +154,7 @@ def xmipp_transform_threshold(
     args_validation={
         "outputs": "(.+)\.atom.pdb",
         # "pdb": "(.+)\.pdb",
-        "volume": "(.+)\.vol",
+        # "volume": "(.+)\.vol",
     },
 )
 def xmipp_pdb_label_from_volume(
@@ -164,7 +164,7 @@ def xmipp_pdb_label_from_volume(
     volume: str,
     mask: str,
     sampling: str,
-    origin: str
+    origin: str,
 ):
     pass
 
