@@ -121,6 +121,14 @@ class TempFileProxy(Proxy):
         return self.temp_file
 
     @classmethod
+    def proxy_for_string(cls, contents: str, *, file_ext):
+        proxy = TempFileProxy(file_ext)
+        with open(proxy.path, "w") as f:
+            f.write(contents)
+
+        return proxy
+
+    @classmethod
     def concatenated_strings(cls, lines: List[str], *, file_ext):
         proxy = TempFileProxy(file_ext)
         with open(proxy.path, "w") as f:

@@ -6,6 +6,8 @@ from collections import namedtuple
 import glob
 import sqlite3
 
+from typing import List
+
 InputFiles = namedtuple("InputFile", ["emdb_map", "deepres_vol", "structure", "mask"])
 ScipionProtocolRun = namedtuple("ScipionProtocolRun", ["identifier", "classname"])
 
@@ -122,8 +124,22 @@ def find_dependencies(scipion_project_root, *, protocol: str):
     return upstream
 
 
+def find_dependency_filenames(scipion_project_root, *, protocol: str, query: List[str]):
+    upstream = find_dependencies(scipion_project_root, protocol=protocol)
+    upstream = {u.classname: u for u in upstream}
+
+    try:
+        file_info = [upstream[n] for n in query]
+    except KeyError as e:
+        raise KeyError(f"Could not find protocol '{e.args[0]}' in project")
+
+    filenames = [f"{str(f.identifier).zfill(6)}_{f.classname}" for f in file_info]
+    return filenames
+
+
 if __name__ == "__main__":
-    find_dependencies(
+    find_dependency_filenames(
         "/home/max/Documents/val-server/data/val-report-service/EMD-41510",
         protocol="XmippProtDeepRes",
+        query=["ProtImportVolumes", "XmippProtCreateMask3D"],
     )
