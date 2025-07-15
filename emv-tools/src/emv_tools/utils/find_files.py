@@ -4,8 +4,10 @@ import logging
 import re
 from collections import namedtuple
 import glob
+import sqlite3
 
 InputFiles = namedtuple("InputFile", ["emdb_map", "deepres_vol", "structure", "mask"])
+ScipionProtocolRun = namedtuple("ScipionProtocolRun", ["identifier", "classname"])
 
 
 def _glob_re(pattern, strings):
@@ -68,4 +70,60 @@ def find_files(*, scipion_project_root: os.PathLike):
 
     return InputFiles(
         str(emdb_map), str(deepres_vol), str(structure), str(deepres_mask)
+    )
+
+
+def find_dependencies(scipion_project_root, *, protocol: str):
+    def _fetch_protocol_for_output(identifier, *, cursor: sqlite3.Cursor):
+        res = cursor.execute(f"SELECT parent_id FROM Objects WHERE id={identifier}")
+        if res.arraysize > 1:
+            logging.warning(
+                "Multiple parents found upstream protocol; behavior is undefined."
+            )
+
+        if res.arraysize == 0:
+            raise ValueError(f"No instance found for upstream protocol")
+
+        return res.fetchone()[0]
+
+    def _fetch_protocol_name(identifier, *, cursor: sqlite3.Cursor):
+        res = cursor.execute(f"SELECT classname FROM Objects WHERE id={identifier}")
+        return res.fetchone()[0]
+
+    db_path = pathlib.Path(scipion_project_root) / "project.sqlite"
+    db = sqlite3.connect(db_path)
+
+    cursor = db.cursor()
+    res = cursor.execute(f"SELECT id FROM Objects WHERE classname='{protocol}'")
+
+    protocol_id = res.fetchall()
+    if len(protocol_id) > 1:
+        logging.warning(
+            "Multiple instances found for target protocol; behavior is undefined."
+        )
+
+    if len(protocol_id) == 0:
+        raise ValueError("No instance found for target protocol")
+
+    (protocol_id,) = protocol_id[0]
+
+    res = cursor.execute(
+        f"SELECT value FROM Objects where parent_id == {protocol_id} AND classname=='Pointer'"
+    )
+
+    output_ids = [int(identifier) for identifier, in res.fetchall()]
+    upstream_ids = [_fetch_protocol_for_output(i, cursor=cursor) for i in output_ids]
+
+    upstream = [
+        ScipionProtocolRun(i, _fetch_protocol_name(i, cursor=cursor))
+        for i in upstream_ids
+    ]
+
+    return upstream
+
+
+if __name__ == "__main__":
+    find_dependencies(
+        "/home/max/Documents/val-server/data/val-report-service/EMD-41510",
+        protocol="XmippProtDeepRes",
     )
