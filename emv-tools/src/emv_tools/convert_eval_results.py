@@ -17,14 +17,16 @@ from collections import namedtuple
 InputFiles = namedtuple("InputFile", ["volume", "mask", "structure"])
 
 
-def fetch_files(protocol: str, *, project_root: os.PathLike):
+def fetch_files(protocol: str, *, project_root: os.PathLike, volume: str):
     project_root = Path(project_root)
+
+    suffix = "".join(Path(volume).suffixes)[1:]
 
     vol_path = _find_file(
         project_root / "Runs" / f"*_{protocol}" / "extra",
-        suffix="vol",
-        pattern="(.*)deepRes_resolution_originalSize.vol",
-        label="DeepRes volume",
+        suffix=suffix,
+        pattern=f"(.*){volume}",
+        label="Volume",
     )
 
     (mask_filename,) = find_dependency_filenames(
@@ -60,9 +62,11 @@ def find_emdb_identifier(project_root: os.PathLike):
     return int(matches[0][4:])
 
 
-def convert(protocol: str, emb_entry: str, *, project_root: os.PathLike, **kwargs):
+def convert(
+    protocol: str, emb_entry: str, *, project_root: os.PathLike, volume: str, **kwargs
+):
 
-    inputs = fetch_files(protocol, project_root=project_root)
+    inputs = fetch_files(protocol, project_root=project_root, volume=volume)
 
     structure = load_cif_as_pdb(inputs.structure)
     structure = TempFileProxy.proxy_for_string(structure, file_ext="pdb")
@@ -112,11 +116,19 @@ def main():
     )
 
     parser.add_argument(
+        "-vol",
+        "--volume",
+        dest="volume",
+        required=True,
+        help="Path to the volume file containing the evaluation data (e.g. XmippProtDeepRes)",
+    )
+
+    parser.add_argument(
         "--entry",
         required=False,
         dest="emb_entry",
         type=int,
-        help="The EMDB identifier for this project",
+        help="The EMD identifier for this project (e.g. (.*)deepRes_resolution_originalSize.vol)",
     )
 
     configure_default_env()
@@ -130,7 +142,7 @@ def main():
         )
         exit(-1)
 
-    save_for_bws(converted, args.output_path, *ids)
+    save_for_bws(converted, args.output_path, *ids, title=args.protocol)
 
 
 if __name__ == "__main__":

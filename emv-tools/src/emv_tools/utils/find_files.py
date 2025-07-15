@@ -92,6 +92,12 @@ def find_dependencies(scipion_project_root, *, protocol: str):
         res = cursor.execute(f"SELECT classname FROM Objects WHERE id={identifier}")
         return res.fetchone()[0]
 
+    def _is_digit(value):
+        try:
+            return value.isdigit()
+        except:
+            return False
+
     db_path = pathlib.Path(scipion_project_root) / "project.sqlite"
     db = sqlite3.connect(db_path)
 
@@ -113,7 +119,11 @@ def find_dependencies(scipion_project_root, *, protocol: str):
         f"SELECT value FROM Objects where parent_id == {protocol_id} AND classname=='Pointer'"
     )
 
-    output_ids = [int(identifier) for identifier, in res.fetchall()]
+    # print(res.fetchall())
+
+    output_ids = [
+        int(identifier) for identifier, in res.fetchall() if _is_digit(identifier)
+    ]
     upstream_ids = [_fetch_protocol_for_output(i, cursor=cursor) for i in output_ids]
 
     upstream = [

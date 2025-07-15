@@ -12,7 +12,7 @@ Atom = namedtuple("Atom", ["name", "res_seq_name", "res_seq_number", "chain", "v
 
 
 @proxify
-def save_for_bws(input_path, output_path, *, emd_entry, pdb_entry):
+def save_for_bws(input_path, output_path, emd_entry, pdb_entry, *, title):
     with open(input_path) as file:
 
         chains_dict = {}
@@ -67,7 +67,7 @@ def save_for_bws(input_path, output_path, *, emd_entry, pdb_entry):
             chains.append(chain)
 
         outputs = {
-            "resource": "DeepRes-Scores (VRS)",
+            "resource": f"{title} (VRS)",
             "entry": {
                 "volume_map": emd_entry,
                 "atomic_model": pdb_entry,
