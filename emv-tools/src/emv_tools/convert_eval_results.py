@@ -1,4 +1,6 @@
 import os
+import re
+import logging
 from pathlib import Path
 from .utils.find_files import _find_file, find_dependency_filenames
 
@@ -6,6 +8,8 @@ from .scipion_bridge.environment import configure_default_env
 from .ffi.scipion import xmipp_pdb_label_from_volume
 from .scipion_bridge.proxy import TempFileProxy
 from .utils.pdb import load_cif_as_pdb
+from .utils.bws import save_for_bws
+from .utils.download import download_emdb_metadata
 
 import argparse
 from collections import namedtuple
@@ -41,26 +45,64 @@ def fetch_files(protocol: str, *, project_root: os.PathLike):
     return InputFiles(volume=vol_path, mask=mask_path, structure=structure_path)
 
 
-def convert(protocol: str, *, project_root: os.PathLike):
+def find_emdb_identifier(project_root: os.PathLike):
+    project_root = str(project_root)
+
+    pattern = re.compile("EMD-[0-9]+")
+    matches = re.findall(pattern, project_root)
+
+    if len(matches) > 1:
+        logging.warning("Multiple possible EMDB entries found; behavior is undefined")
+
+    if not matches:
+        raise ValueError("No EMDB entry found")
+
+    return int(matches[0][4:])
+
+
+def convert(protocol: str, emb_entry: str, *, project_root: os.PathLike, **kwargs):
 
     inputs = fetch_files(protocol, project_root=project_root)
 
     structure = load_cif_as_pdb(inputs.structure)
     structure = TempFileProxy.proxy_for_string(structure, file_ext="pdb")
 
+    if emb_entry is None:
+        emb_entry = find_emdb_identifier(project_root)
+
+    pdb_entry = os.path.split(inputs.structure)[-1][:-4]
+
+    metadata = download_emdb_metadata(emb_entry)
+
     atomic_model = xmipp_pdb_label_from_volume(
         pdb=structure,
         volume=inputs.volume,
         mask=inputs.mask,
-        sampling=0.825,  # metadata.sampling,
-        origin="0 0 0",  # "%f %f %f" % (0.0, 0.0, 0.0) #(metadata.org_x, metadata.org_y, metadata.org_z),
+        sampling=metadata.sampling,
+        origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )
 
-    print(atomic_model)
+    return atomic_model, (str(emb_entry), pdb_entry)
 
 
 def main():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-project",
+        dest="project_root",
+        type=Path,
+        required=True,
+        help="Root directory of the Scipion project",
+    )
+
+    parser.add_argument(
+        "-o",
+        dest="output_path",
+        type=Path,
+        help="Path to a JSON file to write the data",
+    )
+
     parser.add_argument(
         "-n",
         "--name",
@@ -70,15 +112,25 @@ def main():
     )
 
     parser.add_argument(
-        "--project",
-        dest="project_root",
-        type=Path,
-        required=True,
-        help="Root directory of the Scipion project",
+        "--entry",
+        required=False,
+        dest="emb_entry",
+        type=int,
+        help="The EMDB identifier for this project",
     )
 
     configure_default_env()
-    converted = convert(**vars(parser.parse_args()))
+    args = parser.parse_args()
+
+    try:
+        converted, ids = convert(**vars(args))
+    except ValueError:
+        print(
+            "Could not find EMD entry; You can provide this value manually using the --entry flag!"
+        )
+        exit(-1)
+
+    save_for_bws(converted, args.output_path, *ids)
 
 
 if __name__ == "__main__":

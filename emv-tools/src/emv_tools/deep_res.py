@@ -11,7 +11,7 @@ from .utils.pdb import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
 from .utils.bws import save_for_bws
 
-from emv_tools.download import download_emdb_metadata
+from emv_tools.utils.download import download_emdb_metadata
 from .utils.find_files import find_files, InputFiles
 
 
