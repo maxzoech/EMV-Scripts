@@ -88,6 +88,37 @@ def convert(
 
     return atomic_model, (str(emb_entry), pdb_entry)
 
+# Example Usage:
+# DeepRes:
+# scipion3 python -m emv_tools.convert_eval_results 
+# -project '/home/max/Documents/val-server/data/val-report-service/EMD-41510'  
+# -o /home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/converted.json 
+# -n XmippProtDeepRes -
+# vol deepRes_resolution_originalSize.vol
+
+# MonoRes:
+# scipion3 python -m emv_tools.convert_eval_results
+# -project '/home/max/Documents/val-server/data/val-report-service/EMD-41510'
+# -o /home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/converted.json
+# -n XmippProtMonoRes
+# -vol monoresResolutionMap.mrc
+
+# BlocRes:
+# scipion3 python -m emv_tools.convert_eval_results
+# -project '/home/max/Documents/val-server/data/val-report-service/EMD-41510'
+# -o /home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/converted.json
+# -n BsoftProtBlocres
+# -vol resolutionMap.map
+
+# FSC-Q
+# scipion3 python -m emv_tools.convert_eval_results
+# -project '/home/max/Documents/val-server/data/val-report-service/EMD-41510' 
+# -o /home/max/Documents/val-server/EMV-Script-fork/emv-tools/data/converted.json
+# -n XmippProtValFit
+# -vol diferencia.map
+
+# TODO: Map-Q
+
 
 def main():
     parser = argparse.ArgumentParser()
