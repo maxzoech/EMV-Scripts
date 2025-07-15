@@ -7,7 +7,7 @@ import argparse
 import emv_tools
 from .ffi.scipion import *
 from .scipion_bridge.proxy import TempFileProxy
-from .utils.conversion import load_cif_as_pdb
+from .utils.pdb import load_cif_as_pdb
 from .utils.validate_pdb import validate_pdb_lines
 from .utils.bws import save_for_bws
 
@@ -40,7 +40,7 @@ def run(args):
     input_files = (
         find_files(scipion_project_root=args.project)
         if args.project is not None
-        else InputFiles(None, None, None)
+        else InputFiles(None, None, None, None)
     )
 
     emdb_map = _default(input_files.emdb_map, args.map)
@@ -67,7 +67,7 @@ def run(args):
         exit(-1)
 
     # Load files
-    metadata = download_emdb_metadata(12665)  # Get from header instead
+    metadata = download_emdb_metadata(41510)  # Get from header instead
 
     pdb_file = load_cif_as_pdb(cif_path)
     validate_pdb_lines(pdb_file)
@@ -88,12 +88,45 @@ def run(args):
         origin="%f %f %f" % (metadata.org_x, metadata.org_y, metadata.org_z),
     )
 
-    print(deepres_atomic_model)
-
     save_for_bws(deepres_atomic_model, output_path, volume_map="", atomic_model="")
 
 
 def main():
+
+    # Example Usage:
+    # BlocRes: scipion python -m emv_tools.deep_res
+    # --project='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject'
+    # --output=data/
+    # --mask=/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000497_XmippProtCreateMask3D/mask.mrc
+    # --volume='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/001132_BsoftProtBlocres/extra/resolutionMap.map'
+
+    # DeepRes:
+    # scipion python -m emv_tools.deep_res
+    # --project='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject'
+    # --output=data/
+    # --mask=/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000497_XmippProtCreateMask3D/mask.mrc
+    # --volume='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000727_XmippProtDeepRes/extra/deepRes_resolution_originalSize.vol'
+
+    # FSC-Q
+    # scipion python -m emv_tools.deep_res
+    # --project='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject'
+    # --output=data/
+    # --mask=/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000497_XmippProtCreateMask3D/mask.mrc
+    # --volume='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/001615_XmippProtValFit/extra/diferencia.map'
+
+    # MonoRes
+    # scipion python -m emv_tools.deep_res
+    # --project='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject'
+    # --output=data/
+    # --mask=/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000497_XmippProtCreateMask3D/mask.mrc
+    # --volume='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/001189_XmippProtMonoRes/extra/monoresResolutionMap.mrc'
+
+    # Map-Q
+    # scipion python -m emv_tools.deep_res
+    # --project='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject'
+    # --output=data/
+    # --mask=/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/000497_XmippProtCreateMask3D/mask.mrc
+    # --volume='/home/max/Documents/val-server/data/val-report-service/EMD-41510/EMD-41510_ScipionProject/Runs/001683_ProtMapQ/extra/map.mrc'
 
     parser = argparse.ArgumentParser(
         "Convert validation data created on the validation report service (VRS) to a format compatible with 3DBionotes."

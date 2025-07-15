@@ -3,6 +3,7 @@ import pathlib
 import logging
 import re
 from collections import namedtuple
+import glob
 
 InputFiles = namedtuple("InputFile", ["emdb_map", "deepres_vol", "structure", "mask"])
 
@@ -13,17 +14,26 @@ def _glob_re(pattern, strings):
 
 
 def _find_file(path, *, suffix, label, pattern=".*"):
-    print(str(path).strip(os.sep).split(os.sep))
+    paths = glob.glob(str(path))
+    if len(paths) > 1:
+        cands_str = "\n".join(map(str, paths))
+        logging.warning(
+            f"More than one candidate found when expanding paths, the behavior is undefined:\n{cands_str}"
+        )
 
-    assert False
-    cands = list(_glob_re(pattern, directory.glob(f"*.{suffix}")))
+    if len(paths) == 0:
+        return None
+
+    path = paths[0]
+
+    cands = list(_glob_re(pattern, pathlib.Path(path).glob(f"*.{suffix}")))
     if len(cands) > 1:
         cands_str = "\n".join(map(str, cands))
         logging.warning(
             f"More than one candidate found for {label}, the behavior is undefined:\n{cands_str}"
         )
     elif len(cands) == 0:
-        raise ValueError(f"No results for {label} in scipion project")
+        return None
 
     return cands[0]
 
@@ -33,14 +43,14 @@ def find_files(*, scipion_project_root: os.PathLike):
 
     # EMDB map
     emdb_map = _find_file(
-        scipion_project_root / "Runs" / "([0-9]+)_ProtImportVolumes" / "extra",
+        scipion_project_root / "Runs" / "000002_ProtImportVolumes" / "extra",
         suffix="map",
         pattern="(.*)emd_([0-9]+).map",
         label="map file",
     )
 
     deepres_vol = _find_file(
-        scipion_project_root / "Runs" / "000581_XmippProtDeepRes" / "extra",
+        scipion_project_root / "Runs" / "*_XmippProtDeepRes" / "extra",
         suffix="vol",
         pattern="(.*)deepRes_resolution_originalSize.vol",
         label="DeepRes volume",
